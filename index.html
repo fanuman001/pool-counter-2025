@@ -3,113 +3,148 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>🎱 ELITE PRO - 自定義單價版</title>
+    <title>ELITE PRO - ULTIMATE</title>
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
     <style>
         :root { 
             --blue: #0084ff; --red: #ff3333; --green: #00ff88; --gold: #ffd700;
-            --bg: #0a0b0e; --card: #161a22; --panel: #1f2530; --text: #e0e6ed; --border: #30363d;
+            --bg: #050608; --card: #12141d; --panel: #1c1f2b; --text: #e0e6ed; --border: #2d3139;
         }
-        body { font-family: "PingFang TC", sans-serif; background: var(--bg); color: var(--text); margin: 0; padding: 15px; }
+        body { font-family: "PingFang TC", "Microsoft JhengHei", sans-serif; background: var(--bg); color: var(--text); margin: 0; padding: 15px; }
         
         /* Layout */
         .main-layout { display: flex; flex-wrap: wrap; gap: 20px; max-width: 1400px; margin: 0 auto; }
         .column { flex: 1; min-width: 350px; }
-        .card { background: var(--card); padding: 20px; border-radius: 20px; border: 1px solid var(--border); margin-bottom: 20px; }
-        
-        /* 單價設定區 */
-        .config-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; margin-bottom: 15px; background: #0d1117; padding: 15px; border-radius: 12px; }
-        .config-item { text-align: center; }
-        .config-item label { display: block; font-size: 0.75rem; color: #8b949e; margin-bottom: 5px; }
-        .config-item input { width: 80%; background: none; border: none; border-bottom: 2px solid var(--gold); color: #fff; text-align: center; font-size: 1.2rem; font-weight: bold; outline: none; }
+        .card { background: var(--card); padding: 20px; border-radius: 20px; border: 1px solid var(--border); margin-bottom: 20px; box-shadow: 0 10px 30px rgba(0,0,0,0.5); }
+        .section-header { font-size: 0.9rem; color: #8b949e; font-weight: 900; border-bottom: 1px solid var(--border); padding-bottom: 10px; margin-bottom: 15px; display: flex; justify-content: space-between; align-items: center; letter-spacing: 1px; }
 
-        /* 球員與分隊 */
-        .player-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(100px, 1fr)); gap: 12px; }
-        .p-btn { padding: 15px 5px; background: var(--panel); border: 2px solid var(--border); border-radius: 12px; cursor: pointer; text-align: center; font-weight: bold; color: #8b949e; transition: 0.2s; }
-        .p-btn.active-p { border-color: #fff; color: #fff; box-shadow: 0 0 15px var(--t-color); transform: translateY(-3px); }
+        /* Config */
+        .config-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; margin-bottom: 15px; background: var(--panel); padding: 12px; border-radius: 12px; }
+        .config-item label { display: block; font-size: 0.7rem; color: #666; text-align: center; }
+        .config-item input { width: 100%; background: none; border: none; color: var(--gold); text-align: center; font-size: 1.1rem; font-weight: bold; outline: none; }
+
+        /* Players */
+        .player-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(90px, 1fr)); gap: 10px; }
+        .p-btn { padding: 12px 5px; background: var(--panel); border: 1px solid var(--border); border-radius: 10px; cursor: pointer; text-align: center; font-weight: bold; color: #555; transition: 0.2s; font-size: 0.85rem; }
+        .p-btn.active-p { border-color: #fff; color: #fff; box-shadow: 0 0 15px var(--t-color); transform: translateY(-2px); }
         .shuffling { animation: shuffle 0.1s infinite; }
-        @keyframes shuffle { 0%, 100% { opacity: 1; } 50% { opacity: 0.5; transform: scale(0.95); } }
+        @keyframes shuffle { 0% { opacity: 0.5; } 50% { opacity: 1; transform: scale(0.98); } }
 
-        /* 隊伍樣式 */
-        .team-card { border-radius: 15px; padding: 15px; margin-bottom: 15px; position: relative; border: 1px solid #333; }
-        .egg-dot { width: 32px; height: 32px; border-radius: 50%; border: 1px solid #444; display: inline-flex; align-items: center; justify-content: center; cursor: pointer; margin-right: 5px; font-weight: bold; }
+        /* Teams */
+        .team-box { background: rgba(255,255,255,0.02); padding: 15px; border-radius: 15px; border: 1px solid var(--border); margin-bottom: 15px; border-left: 6px solid #444; position: relative; }
+        .win-btn { width: 100%; padding: 10px; border-radius: 8px; border: none; font-weight: 900; cursor: pointer; margin-bottom: 10px; transition: 0.3s; filter: grayscale(1); opacity: 0.5; }
+        .win-btn.is-winner { filter: grayscale(0); opacity: 1; box-shadow: 0 0 15px var(--t-color); border: 1px solid #fff; }
+
+        /* Eggs */
+        .egg-row { display: flex; align-items: center; gap: 8px; margin-top: 10px; flex-wrap: wrap; }
+        .egg-dot { width: 30px; height: 30px; border-radius: 50%; border: 1px solid #444; display: flex; align-items: center; justify-content: center; cursor: pointer; font-size: 0.8rem; font-weight: bold; transition: 0.2s; }
         .egg-dot.active { background: var(--gold); color: #000; border-color: #fff; box-shadow: 0 0 10px var(--gold); }
 
-        .btn-main { width: 100%; padding: 18px; background: linear-gradient(135deg, #238636, #2ea043); color: white; border: none; border-radius: 15px; font-weight: 900; cursor: pointer; font-size: 1.1rem; }
-        .list-row { display: flex; justify-content: space-between; padding: 12px 5px; border-bottom: 1px solid #21262d; }
+        /* Wallet */
+        .wallet-row { display: flex; justify-content: space-between; align-items: center; padding: 10px 5px; border-bottom: 1px solid #21262d; }
+        .money-box { font-family: 'Courier New', monospace; font-weight: bold; cursor: pointer; min-width: 80px; text-align: right; }
+        .blur { filter: blur(5px); pointer-events: none; }
+        .win-rate { font-size: 0.7rem; color: #555; margin-right: 10px; background: #000; padding: 2px 5px; border-radius: 4px; }
+
+        /* History & Admin */
+        #log-list { max-height: 300px; overflow-y: auto; font-size: 0.8rem; }
+        .log-item { background: #0d1117; padding: 10px; border-radius: 8px; margin-bottom: 8px; border-left: 3px solid #333; position: relative; }
+        .del-btn { position: absolute; right: 8px; top: 8px; color: var(--red); cursor: pointer; opacity: 0.3; }
+        .del-btn:hover { opacity: 1; }
+
+        .btn-main { width: 100%; padding: 15px; background: linear-gradient(135deg, #238636, #2ea043); color: white; border: none; border-radius: 12px; font-weight: 900; cursor: pointer; margin-top: 10px; transition: 0.2s; }
+        .btn-main:hover { filter: brightness(1.2); }
+
+        /* Modal */
+        .modal { display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.9); justify-content: center; align-items: center; z-index: 999; backdrop-filter: blur(10px); }
+        .modal-content { background: var(--card); padding: 25px; border-radius: 20px; width: 90%; max-width: 400px; border: 1px solid var(--border); }
     </style>
 </head>
 <body>
 
-<h2 style="text-align:center; color: var(--gold); letter-spacing: 5px;">🎱 ELITE PRO MANAGEMENT</h2>
+    <h2 style="text-align:center; color: var(--gold); letter-spacing: 4px; margin: 10px 0;">🎱 ELITE PRO <span style="font-size: 0.7rem; vertical-align: middle; opacity: 0.5;">v.ULTIMATE</span></h2>
 
-<div class="main-layout">
-    <div class="column">
-        <div class="card">
-            <div style="color: #8b949e; font-size: 0.9rem; margin-bottom: 10px; font-weight: bold;">💰 玩法單價設定 (手動輸入)</div>
-            <div class="config-grid">
-                <div class="config-item">
-                    <label>底錢</label>
-                    <input type="number" id="price-base" value="150">
+    <div class="main-layout">
+        <div class="column">
+            <div class="card">
+                <div class="section-header">
+                    <span>⚙️ 局設定與玩法</span>
+                    <button onclick="addTeam()" style="background:none; border:1px solid #444; color:#888; font-size:0.7rem; padding:2px 8px; border-radius:4px;">➕ 新增隊伍</button>
                 </div>
-                <div class="config-item">
-                    <label>普通球</label>
-                    <input type="number" id="price-normal" value="50">
+                <div class="config-grid">
+                    <div class="config-item"><label>贏底</label><input type="number" id="cfg-base" value="150"></div>
+                    <div class="config-item"><label>普通球</label><input type="number" id="cfg-ball" value="50"></div>
+                    <div class="config-item"><label>彩蛋球</label><input type="number" id="cfg-egg" value="50"></div>
                 </div>
-                <div class="config-item">
-                    <label>彩蛋球</label>
-                    <input type="number" id="price-egg" value="50">
-                </div>
+                <button onclick="lottoSplit()" class="btn-main" style="background:var(--blue); margin-bottom: 15px;">🎰 樂透自動分隊 (出戰人員)</button>
+                
+                <div id="teams-list"></div>
+                <button class="btn-main" onclick="calculateGame()">💰 結算存檔</button>
             </div>
-            <button onclick="lottoSplit()" style="width:100%; background:var(--blue); color:white; border:none; padding:10px; border-radius:8px; font-weight:bold; cursor:pointer;">🎰 隨機樂透分隊</button>
+
+            <div class="card" style="border-top: 2px solid var(--gold);">
+                <div class="section-header">📊 趣味關係分析</div>
+                <div id="analysis-box" style="font-size: 0.8rem; color: #8b949e;">運算中...</div>
+            </div>
         </div>
 
-        <div class="card">
-            <div id="p-btns" class="player-grid">載入中...</div>
-        </div>
+        <div class="column">
+            <div class="card">
+                <div class="section-header">👥 出戰成員 (<span id="count-active">0</span>)</div>
+                <div id="p-btns" class="player-grid">載入中...</div>
+            </div>
 
-        <div id="teams-list"></div>
-        <button class="btn-main" onclick="calculate()">🚀 結算並存檔</button>
+            <div class="card">
+                <div class="section-header">
+                    <span>💎 錢包餘額</span>
+                    <div>
+                        <button onclick="toggleWalletHide()" style="background:none; border:none; color:var(--blue); cursor:pointer; font-size:0.7rem;">顯示/隱藏</button>
+                        <button onclick="toggleAdmin()" style="background:none; border:none; color:#444; cursor:pointer;">⚙️</button>
+                    </div>
+                </div>
+                <div id="admin-panel" style="display:none; background:rgba(255,0,0,0.05); padding:15px; border-radius:12px; margin-bottom:15px; border:1px solid rgba(255,0,0,0.2);">
+                    <div style="display:flex; gap:5px; margin-bottom:10px;">
+                        <input id="new-p-name" placeholder="新成員姓名" style="flex:1; background:#000; border:1px solid #333; color:white; padding:8px; border-radius:5px;">
+                        <button onclick="addPlayer()" style="background:var(--blue); border:none; color:white; padding:0 15px; border-radius:5px;">新增</button>
+                    </div>
+                    <button onclick="resetAllData()" style="width:100%; padding:8px; background:none; border:1px solid var(--red); color:var(--red); border-radius:5px; font-size:0.75rem;">🧨 全員金額清零 (含歷史)</button>
+                </div>
+                <div id="wallet-list"></div>
+            </div>
+
+            <div class="card">
+                <div class="section-header">📜 歷史動態</div>
+                <div id="log-list"></div>
+            </div>
+        </div>
     </div>
 
-    <div class="column">
-        <div class="card">
-            <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:15px;">
-                <span style="font-weight:900;">💎 球員錢包</span>
-                <button onclick="toggleAdmin()" style="background:none; border:none; color:#555; cursor:pointer;">⚙️</button>
-            </div>
-            
-            <div id="admin-panel" style="display:none; background:#000; padding:15px; border-radius:12px; margin-bottom:15px; border:1px solid var(--red);">
-                <input id="new-name" placeholder="新成員名字" style="width:60%; padding:8px; background:#111; border:1px solid #333; color:white; border-radius:5px;">
-                <button onclick="addPlayer()" style="padding:8px 15px; background:var(--blue); color:white; border:none; border-radius:5px;">新增</button>
-                <button onclick="resetAll()" style="width:100%; margin-top:10px; color:var(--red); background:none; border:1px solid var(--red); padding:5px; border-radius:5px;">🧨 全員清零</button>
-            </div>
-            
-            <div id="board">載入中...</div>
-        </div>
-
-        <div class="card">
-            <div style="font-weight:900; margin-bottom:15px;">📜 最近紀錄</div>
-            <div id="log-list" style="max-height:400px; overflow-y:auto;"></div>
+    <div id="checkin-modal" class="modal">
+        <div class="modal-content">
+            <h3 style="margin-top:0;">☀️ 今日出戰名單</h3>
+            <p style="font-size:0.8rem; color:#666;">偵測到系統休眠，請勾選今日參與成員：</p>
+            <div id="checkin-grid" style="display:grid; grid-template-columns:1fr 1fr; gap:10px; max-height:200px; overflow-y:auto;"></div>
+            <button onclick="confirmCheckin()" class="btn-main" style="margin-top:20px;">確認並開始</button>
         </div>
     </div>
-</div>
 
-<div id="modal" style="display:none; position:fixed; inset:0; background:rgba(0,0,0,0.95); justify-content:center; align-items:center; z-index:9999;">
-    <div style="background:var(--card); padding:30px; border-radius:25px; width:90%; max-width:380px; text-align:center; border:1px solid #444;">
-        <h3 id="m-title" style="color:var(--gold)">結算清單</h3>
-        <div id="m-detail" style="margin:20px 0; background:#0d1117; padding:15px; border-radius:12px; text-align:left; font-family:monospace;"></div>
-        <button onclick="confirmSubmit()" class="btn-main">確認無誤，寫入資料庫</button>
-        <button onclick="document.getElementById('modal').style.display='none'" style="width:100%; background:none; border:none; color:#555; margin-top:15px; cursor:pointer;">返回修改</button>
+    <div id="confirm-modal" class="modal">
+        <div class="modal-content">
+            <h3 id="m-title">結算確認</h3>
+            <div id="m-detail" style="background:#000; padding:15px; border-radius:10px; font-family:monospace; font-size:0.9rem; line-height:1.6;"></div>
+            <button onclick="submitToDB()" class="btn-main">確認無誤，寫入雲端</button>
+            <button onclick="closeModal()" style="width:100%; background:none; border:none; color:#555; margin-top:10px; cursor:pointer;">返回修改</button>
+        </div>
     </div>
-</div>
 
 <script>
     const SUPABASE_URL = 'https://nzuxyiefpenwuqudajdw.supabase.co';
     const SUPABASE_KEY = 'sb_publishable_7y2n8zIopxlKEhcsJ05D2A_U89IFgae';
     const _db = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+    const ADMIN_PW = "8888";
+    const IDLE_LIMIT = 5 * 60 * 60 * 1000; // 5小時
 
-    let players = [], history = [], tempResults = null;
+    let players = [], history = [], walletHidden = true, tempSubmit = null;
     let teams = [
         { id: 't1', name: '藍隊', color: '#0084ff', members: [], kills: 0, eggs: 0, eggLimit: 2, win: false },
         { id: 't2', name: '紅隊', color: '#ff3333', members: [], kills: 0, eggs: 0, eggLimit: 2, win: false }
@@ -117,6 +152,7 @@
 
     async function init() {
         await fetchData();
+        checkAutoSleep();
         _db.channel('any').on('postgres_changes', { event: '*', schema: 'public' }, fetchData).subscribe();
     }
 
@@ -125,171 +161,278 @@
         const { data: h } = await _db.from('history').select('*').order('created_at', { ascending: false });
         players = p || []; history = h || [];
         render();
+        runAnalysis();
     }
 
-    // --- 🎰 樂透分隊動畫 ---
-    function lottoSplit() {
-        const activeOnField = players.filter(p => !p.name.startsWith("OFF_"));
-        if(activeOnField.length < 2) return alert("出戰人數不足！");
-        const container = document.getElementById('p-btns');
-        container.classList.add('shuffling');
-        let count = 0;
-        const inv = setInterval(() => {
-            teams.forEach(t => t.members = []);
-            const shuffled = [...activeOnField].sort(() => Math.random() - 0.5);
-            shuffled.forEach((p, i) => teams[i % teams.length].members.push(p.id));
-            renderOnlyPlayers();
-            if(++count > 12) { clearInterval(inv); container.classList.remove('shuffling'); render(); }
-        }, 80);
-    }
-
-    // --- 💰 結算核心邏輯 ---
-    async function calculate() {
-        const winner = teams.find(t => t.win);
-        if(!winner) return alert("請選出本局贏底隊伍！");
-
-        const valBase = parseInt(document.getElementById('price-base').value) || 0;
-        const valNormal = parseInt(document.getElementById('price-normal').value) || 0;
-        const valEgg = parseInt(document.getElementById('price-egg').value) || 0;
-
-        let eggBonuses = {};
-        for(let t of teams) {
-            if(t.eggs === 0) eggBonuses[t.id] = 0;
-            else if(t.eggs === 1) eggBonuses[t.id] = valEgg;
-            else if(t.eggs === 2) eggBonuses[t.id] = valEgg * 3;
-            else {
-                const multi = prompt(`${t.name} 彩蛋進了 ${t.eggs} 顆，請問單價乘以幾倍？`, t.eggs);
-                eggBonuses[t.id] = valEgg * (parseInt(multi) || t.eggs);
-            }
-        }
-
-        let results = [];
-        const activeTeams = teams.filter(t => t.members.length > 0);
-        
-        activeTeams.forEach(t => {
-            let totalProfit = 0;
-            activeTeams.forEach(ot => {
-                if(t.id === ot.id) return;
-                // 底錢
-                if(t.win) totalProfit += valBase; else if(ot.win) totalProfit -= valBase;
-                // 普通球
-                totalProfit += (t.kills - ot.kills) * valNormal;
-                // 彩蛋球
-                totalProfit += (eggBonuses[t.id] - eggBonuses[ot.id]);
-            });
-            
-            const perPerson = Math.floor(totalProfit / t.members.length);
-            t.members.forEach(pid => {
-                const p = players.find(x => x.id === pid);
-                results.push({ id: pid, name: p.name, change: perPerson });
-            });
-        });
-
-        tempResults = {
-            results: results,
-            desc: `⚔️ ${winner.name}勝 | 底:${valBase} 普:${valNormal} | ` + results.map(r => `${r.name}:${r.change >= 0 ? '+' : ''}${r.change}`).join(', ')
-        };
-
-        document.getElementById('m-detail').innerHTML = results.map(r => 
-            `<div style="display:flex; justify-content:space-between;"><span>${r.name}</span><b style="color:${r.change>=0?var(--green):var(--red)}">${r.change >= 0 ? '+' : ''}${r.change}</b></div>`
-        ).join('');
-        document.getElementById('modal').style.display = 'flex';
-    }
-
-    async function confirmSubmit() {
-        for(let r of tempResults.results) {
-            const p = players.find(x => x.id === r.id);
-            await _db.from('players').update({ money: p.money + r.change }).eq('id', p.id);
-        }
-        await _db.from('history').insert([{ description: tempResults.desc }]);
-        document.getElementById('modal').style.display = 'none';
-        teams.forEach(t => { t.kills = 0; t.eggs = 0; t.win = false; });
-        fetchData();
-    }
-
-    // --- UI 輔助功能 ---
-    function renderOnlyPlayers() {
-        const active = players.filter(p => !p.name.startsWith("OFF_"));
-        document.getElementById('p-btns').innerHTML = active.map(p => {
-            const t = teams.find(team => team.members.includes(p.id));
-            return `<div class="p-btn ${t?'active-p':''}" style="${t?`border-color:${t.color}; --t-color:${t.color}`:''}" onclick="handlePlayerClick(${p.id})">${p.name}</div>`;
-        }).join('');
-    }
-
+    // --- 核心渲染 ---
     function render() {
-        renderOnlyPlayers();
+        const activePlayers = players.filter(p => !p.name.startsWith("OFF_"));
+        document.getElementById('count-active').innerText = activePlayers.length;
+
+        // 出戰成員按鈕
+        document.getElementById('p-btns').innerHTML = activePlayers.map(p => {
+            const t = teams.find(team => team.members.includes(p.id));
+            return `<div class="p-btn ${t?'active-p':''}" style="${t?`border-color:${t.color}; --t-color:${t.color}`:''}" onclick="togglePlayerTeam(${p.id})">${p.name}</div>`;
+        }).join('');
+
+        // 隊伍列表
         document.getElementById('teams-list').innerHTML = teams.map(t => `
-            <div class="team-card" style="background:${t.color}11; border-color:${t.color}44">
-                <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:10px;">
-                    <b style="color:${t.color}">${t.name}</b>
-                    <button onclick="setWinner('${t.id}')" style="background:${t.win?t.color:'#333'}; color:white; border:none; padding:5px 10px; border-radius:5px; font-weight:bold;">${t.win?'★ 贏底中':'選為贏家'}</button>
-                </div>
+            <div class="team-box" style="border-left-color:${t.color}">
+                <button onclick="removeTeam('${t.id}')" style="position:absolute; right:5px; top:5px; background:none; border:none; color:#333; cursor:pointer;">✕</button>
+                <button class="win-btn ${t.win?'is-winner':''}" style="background:${t.color}; --t-color:${t.color}" onclick="setWinner('${t.id}')">${t.name} ${t.win?'★ 贏底':''}</button>
                 <div style="display:flex; justify-content:space-between; align-items:center;">
-                    <span>進球: <b style="font-size:1.4rem;">${t.kills}</b></span>
+                    <span>擊球數: <b style="font-size:1.2rem; color:${t.color}">${t.kills}</b></span>
                     <div>
-                        <button onclick="adjKills('${t.id}',-1)" style="width:30px; height:30px; border-radius:5px; border:none; background:#222; color:white;">-</button>
-                        <button onclick="adjKills('${t.id}',1)" style="width:30px; height:30px; border-radius:5px; border:none; background:${t.color}; color:white;">+</button>
+                        <button onclick="adjKills('${t.id}',-1)" style="width:25px; border:none; background:#222; color:white;">-</button>
+                        <button onclick="adjKills('${t.id}',1)" style="width:25px; border:none; background:${t.color}; color:white;">+</button>
                     </div>
                 </div>
-                <div style="margin-top:10px;">
-                    <small style="color:#666">彩蛋:</small>
+                <div class="egg-row">
+                    <small style="color:#555">彩蛋:</small>
                     ${Array.from({length: t.eggLimit}).map((_,i) => `
-                        <div class="egg-dot ${t.eggs > i ? 'active' : ''}" onclick="setEgg('${t.id}',${i+1})">${i+1}</div>
+                        <div class="egg-dot ${t.eggs > i ? 'active' : ''}" onclick="setEgg('${t.id}', ${i+1})">${i+1}</div>
                     `).join('')}
-                    <button onclick="addEggSlot('${t.id}')" style="background:none; border:1px dashed #444; color:#444; border-radius:50%; width:28px; height:28px;">+</button>
+                    <div class="egg-dot" style="border:1px dashed #444" onclick="addEggSlot('${t.id}')">+</div>
                 </div>
             </div>
         `).join('');
 
-        document.getElementById('board').innerHTML = players.map(p => {
-            const hx = history.filter(h => h.description.includes(` ${p.name}:`));
-            const wins = hx.filter(h => h.description.includes(` ${p.name}: +`)).length;
-            const rate = hx.length ? Math.round((wins/hx.length)*100) : 0;
+        // 錢包列表
+        document.getElementById('wallet-list').innerHTML = players.map(p => {
+            const myHistory = history.filter(h => h.description.includes(` ${p.name}:`));
+            const wins = myHistory.filter(h => h.description.includes(` ${p.name}: +`)).length;
+            const rate = myHistory.length ? Math.round((wins/myHistory.length)*100) : 0;
+            const isRest = p.name.startsWith("OFF_");
             return `
-            <div class="list-row">
-                <span>${p.name} <small style="color:#555; margin-left:8px;">${rate}%勝</small></span>
-                <span style="color:${p.money>=0?var(--green):var(--red)}; font-weight:bold; cursor:pointer;" onclick="manualAdj(${p.id},'${p.name}',${p.money})">${p.money>0?'+':''}${p.money}</span>
+            <div class="wallet-row">
+                <div style="display:flex; align-items:center;">
+                    <button onclick="toggleRest(${p.id}, '${p.name}')" style="background:none; border:none; cursor:pointer; font-size:0.8rem; margin-right:8px;">${isRest?'💤':'✅'}</button>
+                    <span style="${isRest?'color:#444':''}">${p.name.replace("OFF_","")}</span>
+                </div>
+                <div style="display:flex; align-items:center;">
+                    <span class="win-rate">${rate}% Win</span>
+                    <div class="money-box ${walletHidden?'blur':''}" 
+                         style="color:${p.money>=0?'#00ff88':'#ff3333'}" 
+                         onclick="manualEditMoney(${p.id}, '${p.name}', ${p.money})">
+                        ${p.money>0?'+':''}${p.money}
+                    </div>
+                </div>
             </div>`;
         }).join('');
 
-        document.getElementById('log-list').innerHTML = history.slice(0, 10).map(h => `
-            <div style="background:#111; padding:10px; border-radius:8px; margin-bottom:8px; font-size:0.8rem; border-left:3px solid #444;">
-                <button onclick="deleteRecord(${h.id})" style="float:right; border:none; background:none; color:var(--red); cursor:pointer;">🗑️</button>
-                <div style="color:#555;">${new Date(h.created_at).toLocaleString()}</div>
+        // 歷史紀錄
+        document.getElementById('log-list').innerHTML = history.slice(0, 20).map(h => `
+            <div class="log-item">
+                <span class="del-btn" onclick="deleteRecord(${h.id})">🗑️</span>
+                <div style="color:#555; font-size:0.6rem; margin-bottom:3px;">${new Date(h.created_at).toLocaleString()}</div>
                 <div>${h.description}</div>
             </div>`).join('');
     }
 
-    async function manualAdj(pid, name, cur) {
-        const n = prompt(`手動調整 ${name} 金額:`, cur);
-        if(n !== null) { 
+    // --- 自動休眠與出戰系統 ---
+    function checkAutoSleep() {
+        const last = localStorage.getItem('last_active') || Date.now();
+        if (Date.now() - last > IDLE_LIMIT) {
+            setAllSleep();
+        }
+        localStorage.setItem('last_active', Date.now());
+        
+        // 若全員休息，顯示簽到
+        const active = players.filter(p => !p.name.startsWith("OFF_"));
+        if (active.length === 0 && players.length > 0) {
+            showCheckin();
+        }
+    }
+
+    async function setAllSleep() {
+        for(let p of players) {
+            if(!p.name.startsWith("OFF_")) {
+                await _db.from('players').update({ name: "OFF_" + p.name }).eq('id', p.id);
+            }
+        }
+        fetchData();
+    }
+
+    function showCheckin() {
+        const grid = document.getElementById('checkin-grid');
+        grid.innerHTML = players.map(p => `
+            <label style="background:var(--panel); padding:10px; border-radius:8px; display:flex; align-items:center; gap:10px;">
+                <input type="checkbox" value="${p.id}" data-name="${p.name.replace('OFF_','')}">
+                ${p.name.replace('OFF_','')}
+            </label>
+        `).join('');
+        document.getElementById('checkin-modal').style.display = 'flex';
+    }
+
+    async function confirmCheckin() {
+        const selected = document.querySelectorAll('#checkin-grid input:checked');
+        for(let s of selected) {
+            await _db.from('players').update({ name: s.dataset.name }).eq('id', s.value);
+        }
+        document.getElementById('checkin-modal').style.display = 'none';
+        fetchData();
+    }
+
+    // --- 分隊與樂透 ---
+    function lottoSplit() {
+        const active = players.filter(p => !p.name.startsWith("OFF_"));
+        if(active.length < teams.length) return alert("人數不足分隊");
+        
+        const grid = document.getElementById('p-btns');
+        grid.classList.add('shuffling');
+        
+        let count = 0;
+        const inv = setInterval(() => {
+            teams.forEach(t => t.members = []);
+            const shuffle = [...active].sort(() => Math.random() - 0.5);
+            shuffle.forEach((p, i) => teams[i % teams.length].members.push(p.id));
+            render();
+            if(++count > 15) {
+                clearInterval(inv);
+                grid.classList.remove('shuffling');
+                render();
+            }
+        }, 80);
+    }
+
+    // --- 結算邏輯 ---
+    async function calculateGame() {
+        const winner = teams.find(t => t.win);
+        if(!winner) return alert("請選出贏底隊伍");
+
+        const base = parseInt(document.getElementById('cfg-base').value);
+        const ball = parseInt(document.getElementById('cfg-ball').value);
+        const eggP = parseInt(document.getElementById('cfg-egg').value);
+
+        let results = [];
+        let eggMultis = {};
+
+        for(let t of teams) {
+            if(t.eggs >= 3) {
+                const m = prompt(`【${t.name}】彩蛋進 ${t.eggs} 顆，單價乘幾倍？`, t.eggs);
+                eggMultis[t.id] = parseInt(m) || 1;
+            }
+        }
+
+        const getEggVal = (t) => {
+            if(t.eggs === 0) return 0;
+            if(t.eggs === 1) return eggP;
+            if(t.eggs === 2) return eggP * 3;
+            return eggP * (eggMultis[t.id] || t.eggs);
+        };
+
+        const activeTeams = teams.filter(t => t.members.length > 0);
+        activeTeams.forEach(t => {
+            let profit = 0;
+            activeTeams.forEach(ot => {
+                if(t.id === ot.id) return;
+                if(t.win) profit += base; else if(ot.win) profit -= base;
+                profit += (t.kills - ot.kills) * ball;
+                profit += (getEggVal(t) - getEggVal(ot));
+            });
+            const per = Math.floor(profit / t.members.length);
+            t.members.forEach(pid => results.push({ id: pid, name: players.find(x=>x.id===pid).name, change: per }));
+        });
+
+        tempSubmit = { results, desc: `⚔️ 比賽 | ` + results.map(r => `${r.name}: ${r.change>0?'+':''}${r.change}`).join(', ') };
+        document.getElementById('m-detail').innerHTML = results.map(r => `<div>${r.name}: <b style="color:${r.change>=0?var(--green):var(--red)}">${r.change}</b></div>`).join('');
+        document.getElementById('confirm-modal').style.display = 'flex';
+    }
+
+    async function submitToDB() {
+        for(let r of tempSubmit.results) {
+            const p = players.find(x => x.id === r.id);
+            await _db.from('players').update({ money: p.money + r.change }).eq('id', p.id);
+        }
+        await _db.from('history').insert([{ description: tempSubmit.desc }]);
+        closeModal();
+        teams.forEach(t => { t.kills = 0; t.eggs = 0; t.win = false; });
+        fetchData();
+    }
+
+    // --- 管理與手動修改 ---
+    async function manualEditMoney(pid, name, cur) {
+        if(prompt("請輸入管理密碼以修改：") !== ADMIN_PW) return;
+        const n = prompt(`修改 ${name} 金額 (目前 ${cur}):`, cur);
+        if(n !== null) {
+            const diff = parseInt(n) - cur;
             await _db.from('players').update({ money: parseInt(n) }).eq('id', pid);
-            await _db.from('history').insert([{ description: `🔧 手動調整 | ${name}: 從 ${cur} 改為 ${n}` }]);
+            await _db.from('history').insert([{ description: `🔧 手動調整 | ${name}: ${diff>0?'+':''}${diff}` }]);
             fetchData();
         }
     }
 
+    async function resetAllData() {
+        if(prompt("此動作不可逆，請輸入密碼確認清零：") !== ADMIN_PW) return;
+        let details = [];
+        for(let p of players) {
+            if(p.money !== 0) {
+                details.push(`${p.name}:${-p.money}`);
+                await _db.from('players').update({ money: 0 }).eq('id', p.id);
+            }
+        }
+        await _db.from('history').insert([{ description: `🧨 全域清零 | ` + details.join(', ') }]);
+        alert("已歸零");
+        fetchData();
+    }
+
     async function deleteRecord(hid) {
-        if(!confirm("確定要刪除紀錄並歸還金額嗎？")) return;
+        if(prompt("刪單密碼：") !== ADMIN_PW) return;
         const h = history.find(x => x.id === hid);
         try {
-            const detail = h.description.split('| ')[h.description.split('| ').length - 1];
-            const entries = detail.split(', ');
+            const entries = h.description.split('| ')[1].split(', ');
             for(let e of entries) {
-                const [n, amt] = e.split(':');
-                const target = players.find(x => x.name === n);
-                if(target) await _db.from('players').update({ money: target.money - parseInt(amt) }).eq('id', target.id);
+                const [n, val] = e.split(': ');
+                const target = players.find(x => x.name === n || x.name === "OFF_"+n);
+                if(target) await _db.from('players').update({ money: target.money - parseInt(val) }).eq('id', target.id);
             }
             await _db.from('history').delete().eq('id', hid);
             fetchData();
-        } catch(e) { alert("此筆格式特殊，僅刪除紀錄。"); await _db.from('history').delete().eq('id', hid); fetchData(); }
+        } catch(e) { alert("此紀錄格式無法自動回滾金額。"); }
     }
 
+    // --- 後台分析 ---
+    function runAnalysis() {
+        let pairs = {};
+        history.forEach(h => {
+            if(!h.description.startsWith("⚔️ 比賽")) return;
+            const winners = h.description.split('| ')[1].split(', ').filter(e => e.includes('+')).map(e => e.split(': ')[0]);
+            if(winners.length >= 2) {
+                winners.sort().forEach((p1, i) => {
+                    for(let j=i+1; j<winners.length; j++) {
+                        let key = p1 + " & " + winners[j];
+                        pairs[key] = (pairs[key] || 0) + 1;
+                    }
+                });
+            }
+        });
+        const top = Object.entries(pairs).sort((a,b) => b[1]-a[1])[0];
+        document.getElementById('analysis-box').innerHTML = top ? `🔥 最強搭檔：${top[0]} (共贏 ${top[1]} 場)` : "數據不足分析關係";
+    }
+
+    // --- 輔助函數 ---
+    function toggleWalletHide() { walletHidden = !walletHidden; render(); }
+    function toggleAdmin() { const p = document.getElementById('admin-panel'); p.style.display = p.style.display==='none'?'block':'none'; }
+    async function toggleRest(id, name) {
+        const nn = name.startsWith("OFF_") ? name.replace("OFF_","") : "OFF_"+name;
+        await _db.from('players').update({ name: nn }).eq('id', id); fetchData();
+    }
+    async function addPlayer() {
+        const name = document.getElementById('new-p-name').value;
+        if(name) {
+            await _db.from('players').insert([{ name, money: 0 }]);
+            await _db.from('history').insert([{ description: `🆕 歡迎新成員：${name}！` }]);
+            document.getElementById('new-p-name').value = '';
+            fetchData();
+        }
+    }
+    function addTeam() { teams.push({ id: 't'+Date.now(), name: '新隊伍', color: '#888', members: [], kills: 0, eggs: 0, eggLimit: 2, win: false }); render(); }
+    function removeTeam(tid) { if(teams.length > 2) { teams = teams.filter(t => t.id !== tid); render(); } }
     function adjKills(tid, v) { const t=teams.find(x=>x.id===tid); t.kills=Math.max(0,t.kills+v); render(); }
     function setEgg(tid, n) { const t=teams.find(x=>x.id===tid); t.eggs=(t.eggs===n)?n-1:n; render(); }
     function addEggSlot(tid) { teams.find(x=>x.id===tid).eggLimit++; render(); }
     function setWinner(tid) { teams.forEach(t=>t.win=(t.id===tid)); render(); }
-    function handlePlayerClick(pid) {
+    function togglePlayerTeam(pid) {
         let tidx = teams.findIndex(t => t.members.includes(pid));
         if (tidx !== -1) {
             teams[tidx].members = teams[tidx].members.filter(id => id !== pid);
@@ -297,9 +440,7 @@
         } else { teams[0].members.push(pid); }
         render();
     }
-    function toggleAdmin() { const a=document.getElementById('admin-panel'); a.style.display=a.style.display==='none'?'block':'none'; }
-    async function addPlayer() { const n=document.getElementById('new-name').value; if(n){ await _db.from('players').insert([{name:n, money:0}]); fetchData(); } }
-    async function resetAll() { if(confirm("確定清空所有金額與歷史？")){ await _db.from('players').update({money:0}).neq('id',0); await _db.from('history').delete().neq('id',0); fetchData(); } }
+    function closeModal() { document.querySelectorAll('.modal').forEach(m=>m.style.display='none'); }
 
     init();
 </script>
