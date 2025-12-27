@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>🎱 撞球計分系統 (安全紀錄版)</title>
+    <title>🎱 撞球雲端計分系統 (正式版)</title>
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
     <style>
         :root { --blue: #0d47a1; --blue-l: #4fc3f7; --red: #bf360c; --red-l: #ff8a65; --bg: #1a1a1a; --card: #252525; }
@@ -31,15 +31,15 @@
         .text-plus { color: #69f0ae; } 
         .text-minus { color: #ff5252; font-weight: bold; }
         
-        #admin-panel { display: none; background: #1a1a1a; padding: 10px; border-radius: 8px; margin-bottom: 15px; border: 1px solid #444; }
-        .admin-row { display: flex; justify-content: space-between; padding: 8px 0; border-bottom: 1px solid #333; align-items: center; font-size: 0.85rem; }
-        .status-toggle { cursor: pointer; padding: 3px 8px; border-radius: 4px; background: #444; color: #ccc; }
+        #admin-panel { display: none; background: #111; padding: 12px; border-radius: 8px; margin-bottom: 15px; border: 1px solid #444; }
+        .admin-row { display: flex; justify-content: space-between; padding: 8px 0; border-bottom: 1px solid #222; align-items: center; font-size: 0.85rem; }
+        .status-toggle { cursor: pointer; padding: 3px 8px; border-radius: 4px; background: #333; color: #ccc; }
         .btn-edit-tool { background: none; border: 1px solid #666; color: #999; padding: 3px 8px; border-radius: 4px; cursor: pointer; font-size: 0.75rem; }
         
-        .history-list { max-height: 200px; overflow-y: auto; font-size: 0.8rem; }
-        .history-item { padding: 8px; border-bottom: 1px solid #333; color: #bbb; }
+        .history-list { max-height: 250px; overflow-y: auto; font-size: 0.8rem; }
+        .history-item { padding: 10px; border-bottom: 1px solid #333; color: #bbb; border-left: 3px solid #444; margin-bottom: 5px; background: #1a1a1a; }
 
-        input { background: #111; border: 1px solid #444; color: white; padding: 10px; border-radius: 4px; }
+        input { background: #000; border: 1px solid #444; color: white; padding: 10px; border-radius: 4px; }
         .full-input { width: calc(100% - 22px); margin: 10px 0; }
         #modal { display: none; position: fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.9); justify-content:center; align-items:center; z-index:1000; }
         .modal-box { background:var(--card); padding:25px; border-radius:15px; width:85%; max-width:350px; text-align:center; }
@@ -47,7 +47,7 @@
 </head>
 <body>
 
-    <h2>🎱 撞球雲端計分系統</h2>
+    <h2>🎱 撞球雲端管理系統</h2>
 
     <div class="main-layout">
         <div class="column">
@@ -84,18 +84,20 @@
             <div class="card">
                 <div class="section-header">
                     <span>💰 錢包 (密碼保護)</span>
-                    <button class="btn-edit-tool" onclick="toggleAdmin()">⚙️ 管理員</button>
+                    <button class="btn-edit-tool" onclick="toggleAdmin()">⚙️ 管理員面板</button>
                 </div>
                 <div id="admin-panel">
                     <div id="admin-list"></div>
-                    <input id="new-p-name" class="full-input" placeholder="新增球友姓名">
-                    <button onclick="addPlayer()" style="width:100%; padding:8px; background:#2e7d32; color:white; border:none; border-radius:4px;">+ 新增球友</button>
+                    <input id="new-p-name" class="full-input" placeholder="新球友姓名">
+                    <button onclick="addPlayer()" style="width:100%; padding:10px; background:#2e7d32; color:white; border:none; border-radius:4px; font-weight:bold; margin-bottom:10px;">+ 新增球友</button>
+                    <hr style="border:0; border-top:1px solid #333; margin:15px 0;">
+                    <button onclick="resetAllMoney()" style="width:100%; padding:10px; background:#c62828; color:white; border:none; border-radius:4px; font-weight:bold;">⚠️ 全部金額歸零</button>
                 </div>
                 <div id="board">載入中...</div>
             </div>
 
             <div class="card">
-                <div class="section-header">📜 最近變動紀錄</div>
+                <div class="section-header">📜 最近 15 筆變動</div>
                 <div id="history-log" class="history-list"></div>
             </div>
         </div>
@@ -114,8 +116,7 @@
     const SUPABASE_KEY = 'sb_publishable_7y2n8zIopxlKEhcsJ05D2A_U89IFgae';
     const _supabase = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
     
-    // --- 在這裡修改你的密碼 ---
-    const ADMIN_PASSWORD = "8888";
+    const ADMIN_PASSWORD = "8888"; // 你的管理密碼
 
     let players = [], history = [], blueIDs = [], redIDs = [], curWinner = null, killsA = 0, killsB = 0, tempResults = null;
 
@@ -126,22 +127,20 @@
 
     async function fetchLatest() {
         const { data: pData } = await _supabase.from('players').select('*').order('id');
-        const { data: hData } = await _supabase.from('history').select('*').order('created_at', { ascending: false }).limit(10);
+        const { data: hData } = await _supabase.from('history').select('*').order('created_at', { ascending: false }).limit(15);
         players = pData || []; history = hData || [];
         renderUI();
     }
 
     function checkAuth() {
         const pw = prompt("請輸入管理員密碼：");
-        if (pw === ADMIN_PASSWORD) return true;
-        alert("密碼錯誤，拒絕操作！");
-        return false;
+        return pw === ADMIN_PASSWORD;
     }
 
     function toggleAdmin() {
         const panel = document.getElementById('admin-panel');
         if (panel.style.display !== 'block') {
-            if (!checkAuth()) return;
+            if (!checkAuth()) return alert("密碼錯誤");
             panel.style.display = 'block';
         } else {
             panel.style.display = 'none';
@@ -154,21 +153,29 @@
     }
 
     async function editMoney(id, name, currentMoney) {
-        if (!checkAuth()) return;
+        if (!checkAuth()) return alert("密碼錯誤");
         const newVal = prompt(`修改 ${name.replace("OFF_","")} 的金額：`, currentMoney);
         if (newVal === null || newVal === "" || isNaN(newVal)) return;
         
         const changeVal = parseInt(newVal);
-        // 更新金額
         await _supabase.from('players').update({ money: changeVal }).eq('id', id);
-        // 寫入歷史紀錄
         await _supabase.from('history').insert([{ 
             total_amt: changeVal - currentMoney, 
             description: `[手動調整] ${name.replace("OFF_","")}: ${currentMoney} -> ${changeVal}`
         }]);
     }
 
+    async function resetAllMoney() {
+        if (!confirm("確定要將所有人的金額歸零嗎？這無法撤銷！")) return;
+        for (let p of players) {
+            await _supabase.from('players').update({ money: 0 }).eq('id', p.id);
+        }
+        await _supabase.from('history').insert([{ total_amt: 0, description: "⚠️ 管理員執行：一鍵全體歸零" }]);
+        alert("已全部歸零");
+    }
+
     function renderUI() {
+        // 出戰按鈕
         const active = players.filter(p => !p.name.startsWith("OFF_"));
         document.getElementById('player-buttons').innerHTML = active.map(p => {
             let cls = "p-btn";
@@ -178,6 +185,7 @@
         }).join('');
         document.getElementById('player-count').innerText = `${blueIDs.length + redIDs.length} 人`;
 
+        // 錢包列表
         document.getElementById('board').innerHTML = players.map(p => {
             const cleanName = p.name.replace("OFF_", "");
             return `
@@ -190,6 +198,7 @@
             `;
         }).join('');
 
+        // 管理員清單
         document.getElementById('admin-list').innerHTML = players.map(p => {
             const isOff = p.name.startsWith("OFF_");
             return `
@@ -200,10 +209,11 @@
             `;
         }).join('');
 
+        // 歷史紀錄
         document.getElementById('history-log').innerHTML = history.map(h => `
             <div class="history-item">
-                <small style="color:#666">${new Date(h.created_at).toLocaleString()}</small><br>
-                ${h.description || (h.total_amt > 0 ? '🔵 藍隊勝' : '🔴 紅隊勝')} : <b>$${h.total_amt}</b>
+                <small style="color:#666">${new Date(h.created_at).toLocaleTimeString()}</small><br>
+                ${h.description || (h.total_amt > 0 ? '🔵 藍隊勝' : '🔴 紅隊勝')} <b style="float:right">$${h.total_amt}</b>
             </div>
         `).join('');
     }
@@ -223,6 +233,7 @@
         if(t==='A') killsA = Math.max(0, killsA + v); else killsB = Math.max(0, killsB + v);
         document.getElementById('cnt-a').innerText = killsA; document.getElementById('cnt-b').innerText = killsB;
     }
+
     function calculate() {
         if(!blueIDs.length || !redIDs.length || !curWinner) return alert("請選人與勝負");
         const bP = parseInt(document.getElementById('base-price').value) || 0;
@@ -242,6 +253,7 @@
         tempResults = { amt, calcData, desc: amt > 0 ? "🔵 藍隊獲勝" : "🔴 紅隊獲勝" };
         document.getElementById('m-title').innerText = tempResults.desc;
         document.getElementById('m-detail').innerHTML = `總金額：$${Math.abs(amt)}<br>` + calcData.map(d => `${players.find(p=>p.id===d.id).name.replace("OFF_","")}: ${d.change>0?'+':''}${d.change}`).join('<br>');
+        
         document.getElementById('modal-footer').innerHTML = `
             <button onclick="confirmUpload()" style="flex:1; padding:12px; background:var(--blue); color:white; border:none; border-radius:8px; font-weight:bold;">確認上傳</button>
             <button onclick="document.getElementById('modal').style.display='none'" style="flex:1; padding:12px; background:#444; color:white; border:none; border-radius:8px;">取消</button>
@@ -267,11 +279,13 @@
         document.getElementById('cnt-a').innerText = 0; document.getElementById('cnt-b').innerText = 0;
         setWinner(null); renderUI();
     }
+
     async function addPlayer() {
-        const name = document.getElementById('new-p-name').value;
-        if(!name) return;
-        await _supabase.from('players').insert([{ name, money: 0 }]);
-        document.getElementById('new-p-name').value = "";
+        const nameInput = document.getElementById('new-p-name');
+        const name = nameInput.value.trim();
+        if(!name) return alert("請輸入姓名");
+        await _supabase.from('players').insert([{ name: name, money: 0 }]);
+        nameInput.value = "";
     }
     init();
 </script>
