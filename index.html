@@ -3,10 +3,10 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>🎱 撞球雲端管理系統 (demo)</title>
+    <title>🎱 撞球雲端管理系統 (加倍球增強版)</title>
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
     <style>
-        :root { --blue: #0d47a1; --blue-l: #4fc3f7; --red: #bf360c; --red-l: #ff8a65; --bg: #1a1a1a; --card: #252525; --panel: #111; }
+        :root { --blue: #0d47a1; --blue-l: #4fc3f7; --red: #bf360c; --red-l: #ff8a65; --bg: #1a1a1a; --card: #252525; --panel: #111; --gold: #ffd700; }
         body { font-family: "Microsoft JhengHei", sans-serif; background-color: var(--bg); color: #eee; margin: 0; padding: 15px; }
         h2 { text-align: center; color: #aaa; margin-bottom: 20px; letter-spacing: 2px; }
         .main-layout { display: flex; flex-wrap: wrap; gap: 20px; max-width: 1200px; margin: 0 auto; }
@@ -14,33 +14,38 @@
         .card { background: var(--card); padding: 15px; border-radius: 12px; border: 1px solid #333; margin-bottom: 15px; box-shadow: 0 4px 15px rgba(0,0,0,0.4); }
         .section-header { font-size: 0.9rem; color: #888; font-weight: bold; border-bottom: 1px solid #333; padding-bottom: 8px; margin-bottom: 12px; display: flex; justify-content: space-between; align-items: center; }
         
+        /* 出戰區 */
         .player-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(90px, 1fr)); gap: 10px; }
-        .p-btn { padding: 12px 5px; background: #333; border: 2px solid #444; border-radius: 8px; cursor: pointer; text-align: center; font-weight: bold; transition: 0.2s; }
+        .p-btn { padding: 12px 5px; background: #333; border: 2px solid #444; border-radius: 8px; cursor: pointer; text-align: center; font-weight: bold; }
         .bg-blue { background-color: var(--blue) !important; border-color: var(--blue-l) !important; color: white; transform: scale(1.05); }
         .bg-red { background-color: var(--red) !important; border-color: var(--red-l) !important; color: white; transform: scale(1.05); }
         
-        .price-settings { display: grid; grid-template-columns: 1fr 1fr; gap: 15px; margin-bottom: 20px; }
-        .price-box { background: var(--panel); padding: 10px; border-radius: 10px; text-align: center; border: 1px solid #444; }
-        .price-label { font-size: 0.75rem; color: #777; margin-bottom: 5px; }
-        .price-ctrl { display: flex; align-items: center; justify-content: space-between; gap: 10px; }
-        .price-val { font-size: 1.4rem; font-weight: bold; color: #fb8c00; font-family: monospace; }
-        .btn-mini { width: 30px; height: 30px; border-radius: 5px; border: none; background: #444; color: white; cursor: pointer; font-weight: bold; }
+        /* 金額設定區 */
+        .price-settings { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 10px; margin-bottom: 20px; }
+        .price-box { background: var(--panel); padding: 8px; border-radius: 10px; text-align: center; border: 1px solid #444; }
+        .price-label { font-size: 0.7rem; color: #777; margin-bottom: 5px; }
+        .price-ctrl { display: flex; align-items: center; justify-content: space-between; }
+        .price-val { font-size: 1.1rem; font-weight: bold; color: #fb8c00; font-family: monospace; }
+        .btn-mini { width: 25px; height: 25px; border-radius: 4px; border: none; background: #444; color: white; cursor: pointer; }
 
-        .counter-row { display: flex; justify-content: space-between; align-items: center; background: var(--panel); padding: 10px; border-radius: 8px; margin-bottom: 10px; border-left: 4px solid transparent; }
+        /* 計分器區 */
+        .counter-row { display: flex; justify-content: space-between; align-items: center; background: var(--panel); padding: 10px; border-radius: 8px; margin-bottom: 8px; border-left: 4px solid transparent; }
         .row-blue { border-left-color: var(--blue); }
         .row-red { border-left-color: var(--red); }
-        .btn-circle { width: 38px; height: 38px; border-radius: 50%; border: none; color: white; cursor: pointer; font-size: 1.4rem; }
+        .special-label { color: var(--gold); font-size: 0.85rem; font-weight: bold; }
+        .btn-circle { width: 36px; height: 36px; border-radius: 50%; border: none; color: white; cursor: pointer; font-size: 1.2rem; }
         .btn-calc { width: 100%; background: linear-gradient(135deg, #6200ea, #3700b3); color: white; padding: 16px; border: none; border-radius: 10px; font-size: 1.2rem; font-weight: bold; cursor: pointer; margin-top: 10px; }
         
+        /* 錢包 */
         .score-row { display: flex; justify-content: space-between; padding: 12px 0; border-bottom: 1px solid #333; align-items: center; }
-        .win-rate { font-size: 0.75rem; color: #666; margin-right: 8px; font-family: monospace; }
-        .money-badge { cursor: pointer; padding: 4px 10px; border-radius: 6px; background: rgba(255,255,255,0.05); font-family: monospace; font-size: 1.1rem; min-width: 60px; text-align: right; }
+        .win-rate { font-size: 0.75rem; color: #666; margin-right: 8px; }
+        .money-badge { cursor: pointer; padding: 4px 10px; border-radius: 6px; background: rgba(255,255,255,0.05); font-family: monospace; font-size: 1.1rem; min-width: 65px; text-align: right; }
         .text-plus { color: #69f0ae; } 
         .text-minus { color: #ff5252; font-weight: bold; }
         
         #admin-panel { display: none; background: #111; padding: 12px; border-radius: 8px; margin-bottom: 15px; border: 1px solid #444; }
         .history-list { max-height: 250px; overflow-y: auto; font-size: 0.8rem; }
-        .history-item { padding: 12px; border-bottom: 1px solid #333; color: #bbb; background: #1a1a1a; margin-bottom: 5px; border-radius: 4px; }
+        .history-item { padding: 10px; border-bottom: 1px solid #333; background: #1a1a1a; margin-bottom: 5px; }
 
         #modal { display: none; position: fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.95); justify-content:center; align-items:center; z-index:1000; }
         .modal-box { background:var(--card); padding:25px; border-radius:15px; width:85%; max-width:350px; text-align:center; }
@@ -58,10 +63,10 @@
             </div>
 
             <div class="card">
-                <div class="section-header">2. 本局設定與結果</div>
+                <div class="section-header">2. 本局設定 (含加倍球)</div>
                 <div class="price-settings">
                     <div class="price-box">
-                        <div class="price-label">贏底金額</div>
+                        <div class="price-label">底錢</div>
                         <div class="price-ctrl">
                             <button class="btn-mini" onclick="adjPrice('base', -50)">-</button>
                             <span id="display-base" class="price-val">150</span>
@@ -69,30 +74,50 @@
                         </div>
                     </div>
                     <div class="price-box">
-                        <div class="price-label">每顆球金額</div>
+                        <div class="price-label">普通球</div>
                         <div class="price-ctrl">
                             <button class="btn-mini" onclick="adjPrice('ball', -10)">-</button>
                             <span id="display-ball" class="price-val">50</span>
                             <button class="btn-mini" onclick="adjPrice('ball', 10)">+</button>
                         </div>
                     </div>
+                    <div class="price-box">
+                        <div class="price-label">加倍率</div>
+                        <div class="price-ctrl">
+                            <button class="btn-mini" onclick="adjPrice('mult', -0.1)">-</button>
+                            <span id="display-mult" class="price-val">1.3</span>
+                            <button class="btn-mini" onclick="adjPrice('mult', 0.1)">+</button>
+                        </div>
+                    </div>
                 </div>
 
-                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 20px;">
-                    <button id="btn-win-a" class="p-btn" style="height:65px" onclick="setWinner('A')">🔵 藍隊 贏底</button>
-                    <button id="btn-win-b" class="p-btn" style="height:65px" onclick="setWinner('B')">🔴 紅隊 贏底</button>
+                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 15px;">
+                    <button id="btn-win-a" class="p-btn" style="height:60px" onclick="setWinner('A')">🔵 藍隊 贏底</button>
+                    <button id="btn-win-b" class="p-btn" style="height:60px" onclick="setWinner('B')">🔴 紅隊 贏底</button>
                 </div>
 
-                <div class="counter-row row-blue"><span>藍進紅球 (顆)</span><div>
+                <div class="counter-row row-blue"><span>藍進普通球</span><div>
                     <button class="btn-circle" onclick="adjCount('A', -1)" style="background:#444">-</button>
-                    <span id="cnt-a" style="margin:0 15px; font-weight:bold; font-size:1.3rem;">0</span>
+                    <span id="cnt-a" style="margin:0 12px; font-weight:bold; font-size:1.2rem;">0</span>
                     <button class="btn-circle" onclick="adjCount('A', 1)" style="background:var(--blue)">+</button>
                 </div></div>
-                <div class="counter-row row-red"><span>紅進藍球 (顆)</span><div>
+                <div class="counter-row row-red" style="margin-bottom:15px;"><span>紅進普通球</span><div>
                     <button class="btn-circle" onclick="adjCount('B', -1)" style="background:#444">-</button>
-                    <span id="cnt-b" style="margin:0 15px; font-weight:bold; font-size:1.3rem;">0</span>
+                    <span id="cnt-b" style="margin:0 12px; font-weight:bold; font-size:1.2rem;">0</span>
                     <button class="btn-circle" onclick="adjCount('B', 1)" style="background:var(--red)">+</button>
                 </div></div>
+
+                <div class="counter-row row-blue"><span class="special-label">⭐ 藍進加倍球</span><div>
+                    <button class="btn-circle" onclick="adjSpecial('A', -1)" style="background:#444">-</button>
+                    <span id="spec-a" style="margin:0 12px; font-weight:bold; font-size:1.2rem; color:var(--gold);">0</span>
+                    <button class="btn-circle" onclick="adjSpecial('A', 1)" style="background:var(--blue)">+</button>
+                </div></div>
+                <div class="counter-row row-red"><span class="special-label">⭐ 紅進加倍球</span><div>
+                    <button class="btn-circle" onclick="adjSpecial('B', -1)" style="background:#444">-</button>
+                    <span id="spec-b" style="margin:0 12px; font-weight:bold; font-size:1.2rem; color:var(--gold);">0</span>
+                    <button class="btn-circle" onclick="adjSpecial('B', 1)" style="background:var(--red)">+</button>
+                </div></div>
+
                 <button class="btn-calc" onclick="calculate()">計算並送出</button>
             </div>
         </div>
@@ -106,8 +131,8 @@
                 <div id="admin-panel">
                     <div id="admin-list"></div>
                     <input id="new-p-name" style="width:calc(100% - 22px); margin: 10px 0; background:#000; border:1px solid #444; color:white; padding:10px; border-radius:4px;" placeholder="新球友姓名">
-                    <button onclick="addPlayer()" style="width:100%; padding:10px; background:#2e7d32; color:white; border:none; border-radius:4px; font-weight:bold; margin-bottom:10px;">+ 新增球友</button>
-                    <button onclick="resetAllMoney()" style="width:100%; padding:10px; background:#c62828; color:white; border:none; border-radius:4px; font-weight:bold;">⚠️ 全部歸零</button>
+                    <button onclick="addPlayer()" style="width:100%; padding:10px; background:#2e7d32; color:white; border:none; border-radius:4px; font-weight:bold;">+ 新增球友</button>
+                    <button onclick="resetAllMoney()" style="width:100%; padding:10px; background:#c62828; color:white; border:none; border-radius:4px; font-weight:bold; margin-top:10px;">⚠️ 全部歸零</button>
                 </div>
                 <div id="board">載入中...</div>
             </div>
@@ -122,7 +147,7 @@
     <div id="modal">
         <div class="modal-box">
             <h3 id="m-title"></h3>
-            <div id="m-detail" style="line-height:1.8; color:#ccc; margin-bottom:20px; font-size:1.1rem;"></div>
+            <div id="m-detail" style="line-height:1.6; color:#ccc; margin-bottom:20px;"></div>
             <div id="modal-footer" style="display: flex; gap: 10px;"></div>
         </div>
     </div>
@@ -133,8 +158,9 @@
     const _supabase = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
     
     const ADMIN_PASSWORD = "8888";
-    let players = [], history = [], blueIDs = [], redIDs = [], curWinner = null, killsA = 0, killsB = 0;
-    let basePrice = 150, ballPrice = 50;
+    let players = [], history = [], blueIDs = [], redIDs = [], curWinner = null;
+    let killsA = 0, killsB = 0, specA = 0, specB = 0;
+    let basePrice = 150, ballPrice = 50, multiplier = 1.3;
 
     async function init() {
         await fetchLatest();
@@ -148,26 +174,36 @@
         renderUI();
     }
 
-    // 計算勝率邏輯
     function getWinRate(playerId) {
-        // 只計算包含勝負結果的歷史 (排除手動調整與歸零)
         const relevantGames = history.filter(h => h.blue_members && h.red_members);
         const playerGames = relevantGames.filter(h => h.blue_members.includes(playerId) || h.red_members.includes(playerId));
-        
         if (playerGames.length === 0) return "0%";
-        
         const wins = playerGames.filter(h => {
             const isBlue = h.blue_members.includes(playerId);
             const isRed = h.red_members.includes(playerId);
             return (isBlue && h.total_amt > 0) || (isRed && h.total_amt < 0);
         }).length;
-        
         return Math.round((wins / playerGames.length) * 100) + "%";
     }
 
     function adjPrice(type, val) {
-        if(type === 'base') { basePrice = Math.max(0, basePrice + val); document.getElementById('display-base').innerText = basePrice; }
-        else { ballPrice = Math.max(0, ballPrice + val); document.getElementById('display-ball').innerText = ballPrice; }
+        if(type === 'base') basePrice = Math.max(0, basePrice + val);
+        else if(type === 'ball') ballPrice = Math.max(0, ballPrice + val);
+        else multiplier = Math.max(1, parseFloat((multiplier + val).toFixed(1)));
+        
+        document.getElementById('display-base').innerText = basePrice;
+        document.getElementById('display-ball').innerText = ballPrice;
+        document.getElementById('display-mult').innerText = multiplier;
+    }
+
+    function adjCount(t, v) { 
+        if(t==='A') killsA = Math.max(0, killsA + v); else killsB = Math.max(0, killsB + v);
+        document.getElementById('cnt-a').innerText = killsA; document.getElementById('cnt-b').innerText = killsB;
+    }
+
+    function adjSpecial(t, v) {
+        if(t==='A') specA = Math.max(0, specA + v); else specB = Math.max(0, specB + v);
+        document.getElementById('spec-a').innerText = specA; document.getElementById('spec-b').innerText = specB;
     }
 
     function checkAuth() {
@@ -189,7 +225,7 @@
     }
 
     async function editMoney(id, name, currentMoney) {
-        if (!checkAuth()) return alert("密碼錯誤");
+        if (!checkAuth()) return;
         const newVal = prompt(`修改 ${name.replace("OFF_","")} 的金額：`, currentMoney);
         if (newVal === null || newVal === "" || isNaN(newVal)) return;
         const changeVal = parseInt(newVal);
@@ -202,7 +238,6 @@
         if (!checkAuth()) return;
         for (let p of players) { await _supabase.from('players').update({ money: 0 }).eq('id', p.id); }
         await _supabase.from('history').insert([{ total_amt: 0, description: "⚠️ 管理員執行：一鍵全體歸零" }]);
-        alert("已歸零");
     }
 
     function renderUI() {
@@ -217,12 +252,11 @@
 
         document.getElementById('board').innerHTML = players.map(p => {
             const cleanName = p.name.replace("OFF_", "");
-            const rate = getWinRate(p.id);
             return `
                 <div class="score-row">
                     <span>${cleanName}</span>
                     <div style="display: flex; align-items: center;">
-                        <span class="win-rate">勝率 ${rate}</span>
+                        <span class="win-rate">${getWinRate(p.id)}</span>
                         <span class="money-badge ${p.money >= 0 ? 'text-plus' : 'text-minus'}" onclick="editMoney(${p.id}, '${p.name}', ${p.money})">
                             ${p.money > 0 ? '+' : ''}${p.money}
                         </span>
@@ -235,17 +269,16 @@
             const isOff = p.name.startsWith("OFF_");
             return `
                 <div class="admin-row">
-                    <span style="${isOff?'color:#555':''}">${p.name.replace("OFF_","")}</span>
-                    <span class="status-toggle" onclick="toggleStatus(${p.id}, '${p.name}')">${isOff ? '💤 休息' : '✅ 上場'}</span>
+                    <span>${p.name.replace("OFF_","")}</span>
+                    <span class="status-toggle" onclick="toggleStatus(${p.id}, '${p.name}')">${isOff ? '💤' : '✅'}</span>
                 </div>
             `;
         }).join('');
 
-        const displayHistory = history.slice(0, 15);
-        document.getElementById('history-log').innerHTML = displayHistory.map(h => `
+        document.getElementById('history-log').innerHTML = history.slice(0, 15).map(h => `
             <div class="history-item">
                 <small style="color:#666">${new Date(h.created_at).toLocaleTimeString()}</small><br>
-                ${h.description || (h.total_amt > 0 ? '🔵 藍隊勝' : '🔴 紅隊勝')} <b style="float:right; color:${h.total_amt>=0?'#69f0ae':'#ff5252'}">$${h.total_amt}</b>
+                ${h.description || (h.total_amt > 0 ? '🔵 藍勝' : '🔴 紅勝')} <b style="float:right; color:${h.total_amt>=0?'#69f0ae':'#ff5252'}">$${h.total_amt}</b>
             </div>
         `).join('');
     }
@@ -256,21 +289,27 @@
         else { blueIDs.push(id); }
         renderUI();
     }
+    
     function setWinner(w) { 
         curWinner = w; 
         document.getElementById('btn-win-a').className = w==='A' ? "p-btn bg-blue" : "p-btn";
         document.getElementById('btn-win-b').className = w==='B' ? "p-btn bg-red" : "p-btn";
     }
-    function adjCount(t, v) { 
-        if(t==='A') killsA = Math.max(0, killsA + v); else killsB = Math.max(0, killsB + v);
-        document.getElementById('cnt-a').innerText = killsA; document.getElementById('cnt-b').innerText = killsB;
-    }
 
     function calculate() {
         if(!blueIDs.length || !redIDs.length || !curWinner) return alert("請選人與勝負");
-        let amt = basePrice + (killsA * ballPrice) - (killsB * ballPrice);
-        if(curWinner === 'B') amt = -Math.abs(basePrice + (killsB * ballPrice) - (killsA * ballPrice));
         
+        // 藍隊總分: (普通球 * 單價) + (加倍球 * 單價 * 倍率)
+        let scoreA = (killsA * ballPrice) + (specA * ballPrice * multiplier);
+        // 紅隊總分: (普通球 * 單價) + (加倍球 * 單價 * 倍率)
+        let scoreB = (killsB * ballPrice) + (specB * ballPrice * multiplier);
+        
+        let amt = 0;
+        if(curWinner === 'A') amt = basePrice + scoreA - scoreB;
+        else amt = -(basePrice + scoreB - scoreA);
+        
+        amt = Math.round(amt); // 四捨五入取整
+
         let calcData = [];
         if(amt > 0) {
             blueIDs.forEach(id => calcData.push({id, change: Math.floor(amt / blueIDs.length)}));
@@ -282,7 +321,7 @@
         
         tempResults = { amt, calcData, desc: amt > 0 ? "🔵 藍隊獲勝" : "🔴 紅隊獲勝" };
         document.getElementById('m-title').innerText = tempResults.desc;
-        document.getElementById('m-detail').innerHTML = `總金額：$${Math.abs(amt)}<br>` + calcData.map(d => `${players.find(p=>p.id===d.id).name.replace("OFF_","")}: ${d.change>0?'+':''}${d.change}`).join('<br>');
+        document.getElementById('m-detail').innerHTML = `底錢 $${basePrice} / 倍率 ${multiplier}x<br>總結算：$${Math.abs(amt)}<br>` + calcData.map(d => `${players.find(p=>p.id===d.id).name.replace("OFF_","")}: ${d.change>0?'+':''}${d.change}`).join('<br>');
         document.getElementById('modal-footer').innerHTML = `<button onclick="confirmUpload()" style="flex:1; padding:12px; background:var(--blue); color:white; border:none; border-radius:8px; font-weight:bold;">確認</button><button onclick="document.getElementById('modal').style.display='none'" style="flex:1; padding:12px; background:#444; color:white; border:none; border-radius:8px;">取消</button>`;
         document.getElementById('modal').style.display = 'flex';
     }
@@ -294,17 +333,17 @@
         }
         await _supabase.from('history').insert([{ 
             total_amt: tempResults.amt, 
-            description: tempResults.desc + ` (${blueIDs.length}v${redIDs.length})`,
-            blue_members: blueIDs,
-            red_members: redIDs
+            description: tempResults.desc + ` (加倍:${multiplier}x)`,
+            blue_members: blueIDs, red_members: redIDs
         }]);
         document.getElementById('modal').style.display = 'none';
         resetRound();
     }
 
     function resetRound() {
-        blueIDs = []; redIDs = []; curWinner = null; killsA = 0; killsB = 0;
+        blueIDs = []; redIDs = []; curWinner = null; killsA = 0; killsB = 0; specA = 0; specB = 0;
         document.getElementById('cnt-a').innerText = 0; document.getElementById('cnt-b').innerText = 0;
+        document.getElementById('spec-a').innerText = 0; document.getElementById('spec-b').innerText = 0;
         setWinner(null); renderUI();
     }
 
