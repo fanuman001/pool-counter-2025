@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>🎱 撞球計分系統 (全功能版)</title>
+    <title>🎱 撞球計分系統 (安全紀錄版)</title>
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
     <style>
         :root { --blue: #0d47a1; --blue-l: #4fc3f7; --red: #bf360c; --red-l: #ff8a65; --bg: #1a1a1a; --card: #252525; }
@@ -14,13 +14,11 @@
         .card { background: var(--card); padding: 15px; border-radius: 12px; border: 1px solid #333; margin-bottom: 15px; box-shadow: 0 4px 15px rgba(0,0,0,0.3); }
         .section-header { font-size: 0.9rem; color: #888; font-weight: bold; border-bottom: 1px solid #333; padding-bottom: 8px; margin-bottom: 12px; display: flex; justify-content: space-between; align-items: center; }
         
-        /* 玩家按鈕 */
         .player-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(90px, 1fr)); gap: 10px; }
         .p-btn { padding: 12px 5px; background: #333; border: 2px solid #444; border-radius: 8px; cursor: pointer; text-align: center; font-weight: bold; }
         .bg-blue { background-color: var(--blue) !important; border-color: var(--blue-l) !important; color: white; }
         .bg-red { background-color: var(--red) !important; border-color: var(--red-l) !important; color: white; }
         
-        /* 結算設定 */
         .setting-row { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 15px; }
         .input-group { display: flex; flex-direction: column; gap: 5px; }
         .input-group label { font-size: 0.75rem; color: #777; }
@@ -28,18 +26,19 @@
         .btn-circle { width: 38px; height: 38px; border-radius: 50%; border: none; color: white; cursor: pointer; font-size: 1.4rem; }
         .btn-calc { width: 100%; background: linear-gradient(135deg, #6200ea, #3700b3); color: white; padding: 15px; border: none; border-radius: 8px; font-size: 1.2rem; font-weight: bold; cursor: pointer; }
         
-        /* 錢包區 */
         .score-row { display: flex; justify-content: space-between; padding: 10px 0; border-bottom: 1px solid #333; align-items: center; }
         .money-badge { cursor: pointer; padding: 2px 8px; border-radius: 4px; background: rgba(255,255,255,0.05); }
         .text-plus { color: #69f0ae; } 
         .text-minus { color: #ff5252; font-weight: bold; }
         
-        /* 管理區 */
         #admin-panel { display: none; background: #1a1a1a; padding: 10px; border-radius: 8px; margin-bottom: 15px; border: 1px solid #444; }
         .admin-row { display: flex; justify-content: space-between; padding: 8px 0; border-bottom: 1px solid #333; align-items: center; font-size: 0.85rem; }
         .status-toggle { cursor: pointer; padding: 3px 8px; border-radius: 4px; background: #444; color: #ccc; }
         .btn-edit-tool { background: none; border: 1px solid #666; color: #999; padding: 3px 8px; border-radius: 4px; cursor: pointer; font-size: 0.75rem; }
         
+        .history-list { max-height: 200px; overflow-y: auto; font-size: 0.8rem; }
+        .history-item { padding: 8px; border-bottom: 1px solid #333; color: #bbb; }
+
         input { background: #111; border: 1px solid #444; color: white; padding: 10px; border-radius: 4px; }
         .full-input { width: calc(100% - 22px); margin: 10px 0; }
         #modal { display: none; position: fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.9); justify-content:center; align-items:center; z-index:1000; }
@@ -53,15 +52,12 @@
     <div class="main-layout">
         <div class="column">
             <div class="card">
-                <div class="section-header">
-                    <span>1. 出戰成員</span>
-                    <span id="player-count">0 人</span>
-                </div>
+                <div class="section-header"><span>1. 出戰成員</span><span id="player-count">0 人</span></div>
                 <div id="player-buttons" class="player-grid">載入中...</div>
             </div>
 
             <div class="card">
-                <div class="section-header">2. 本局設定與結果</div>
+                <div class="section-header">2. 本局結算</div>
                 <div class="setting-row">
                     <div class="input-group"><label>贏底金額</label><input type="number" id="base-price" value="150"></div>
                     <div class="input-group"><label>每顆球金額</label><input type="number" id="ball-price" value="50"></div>
@@ -71,14 +67,14 @@
                     <button id="btn-win-b" class="p-btn" style="height:60px" onclick="setWinner('B')">🔴 紅隊 贏底</button>
                 </div>
                 <div class="counter-row"><span>藍進紅球 (顆)</span><div>
-                    <button class="btn-circle" style="background:#444" onclick="adjCount('A', -1)">-</button>
+                    <button class="btn-circle" onclick="adjCount('A', -1)" style="background:#444">-</button>
                     <span id="cnt-a" style="margin:0 15px; font-weight:bold; font-size:1.2rem;">0</span>
-                    <button class="btn-circle" style="background:var(--blue)" onclick="adjCount('A', 1)">+</button>
+                    <button class="btn-circle" onclick="adjCount('A', 1)" style="background:var(--blue)">+</button>
                 </div></div>
                 <div class="counter-row"><span>紅進藍球 (顆)</span><div>
-                    <button class="btn-circle" style="background:#444" onclick="adjCount('B', -1)">-</button>
+                    <button class="btn-circle" onclick="adjCount('B', -1)" style="background:#444">-</button>
                     <span id="cnt-b" style="margin:0 15px; font-weight:bold; font-size:1.2rem;">0</span>
-                    <button class="btn-circle" style="background:var(--red)" onclick="adjCount('B', 1)">+</button>
+                    <button class="btn-circle" onclick="adjCount('B', 1)" style="background:var(--red)">+</button>
                 </div></div>
                 <button class="btn-calc" onclick="calculate()">計算並送出</button>
             </div>
@@ -87,17 +83,20 @@
         <div class="column">
             <div class="card">
                 <div class="section-header">
-                    <span>💰 錢包 (點金額可修改)</span>
-                    <button class="btn-edit-tool" onclick="toggleAdmin()">⚙️ 管理人員</button>
+                    <span>💰 錢包 (密碼保護)</span>
+                    <button class="btn-edit-tool" onclick="toggleAdmin()">⚙️ 管理員</button>
                 </div>
-
                 <div id="admin-panel">
                     <div id="admin-list"></div>
                     <input id="new-p-name" class="full-input" placeholder="新增球友姓名">
-                    <button onclick="addPlayer()" style="width:100%; padding:8px; background:#2e7d32; color:white; border:none; border-radius:4px;">+ 新增</button>
+                    <button onclick="addPlayer()" style="width:100%; padding:8px; background:#2e7d32; color:white; border:none; border-radius:4px;">+ 新增球友</button>
                 </div>
-
                 <div id="board">載入中...</div>
+            </div>
+
+            <div class="card">
+                <div class="section-header">📜 最近變動紀錄</div>
+                <div id="history-log" class="history-list"></div>
             </div>
         </div>
     </div>
@@ -106,8 +105,7 @@
         <div class="modal-box">
             <h3 id="m-title"></h3>
             <div id="m-detail" style="line-height:1.6; color:#ccc; margin-bottom:20px;"></div>
-            <div id="modal-content"></div>
-            <div id="modal-footer" style="display: flex; gap: 10px; margin-top: 15px;"></div>
+            <div id="modal-footer" style="display: flex; gap: 10px;"></div>
         </div>
     </div>
 
@@ -115,6 +113,9 @@
     const SUPABASE_URL = 'https://nzuxyiefpenwuqudajdw.supabase.co';
     const SUPABASE_KEY = 'sb_publishable_7y2n8zIopxlKEhcsJ05D2A_U89IFgae';
     const _supabase = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+    
+    // --- 在這裡修改你的密碼 ---
+    const ADMIN_PASSWORD = "8888";
 
     let players = [], history = [], blueIDs = [], redIDs = [], curWinner = null, killsA = 0, killsB = 0, tempResults = null;
 
@@ -125,14 +126,26 @@
 
     async function fetchLatest() {
         const { data: pData } = await _supabase.from('players').select('*').order('id');
-        const { data: hData } = await _supabase.from('history').select('*').order('created_at', { ascending: false });
+        const { data: hData } = await _supabase.from('history').select('*').order('created_at', { ascending: false }).limit(10);
         players = pData || []; history = hData || [];
         renderUI();
     }
 
+    function checkAuth() {
+        const pw = prompt("請輸入管理員密碼：");
+        if (pw === ADMIN_PASSWORD) return true;
+        alert("密碼錯誤，拒絕操作！");
+        return false;
+    }
+
     function toggleAdmin() {
         const panel = document.getElementById('admin-panel');
-        panel.style.display = (panel.style.display === 'block') ? 'none' : 'block';
+        if (panel.style.display !== 'block') {
+            if (!checkAuth()) return;
+            panel.style.display = 'block';
+        } else {
+            panel.style.display = 'none';
+        }
     }
 
     async function toggleStatus(id, currentName) {
@@ -140,11 +153,19 @@
         await _supabase.from('players').update({ name: newName }).eq('id', id);
     }
 
-    // --- 新增：手動修改單人金額 ---
     async function editMoney(id, name, currentMoney) {
-        const newVal = prompt(`修改 ${name.replace("OFF_","")} 的總金額：`, currentMoney);
+        if (!checkAuth()) return;
+        const newVal = prompt(`修改 ${name.replace("OFF_","")} 的金額：`, currentMoney);
         if (newVal === null || newVal === "" || isNaN(newVal)) return;
-        await _supabase.from('players').update({ money: parseInt(newVal) }).eq('id', id);
+        
+        const changeVal = parseInt(newVal);
+        // 更新金額
+        await _supabase.from('players').update({ money: changeVal }).eq('id', id);
+        // 寫入歷史紀錄
+        await _supabase.from('history').insert([{ 
+            total_amt: changeVal - currentMoney, 
+            description: `[手動調整] ${name.replace("OFF_","")}: ${currentMoney} -> ${changeVal}`
+        }]);
     }
 
     function renderUI() {
@@ -174,12 +195,17 @@
             return `
                 <div class="admin-row">
                     <span style="${isOff?'color:#555':''}">${p.name.replace("OFF_","")}</span>
-                    <span class="status-toggle" onclick="toggleStatus(${p.id}, '${p.name}')">
-                        ${isOff ? '💤 休息' : '✅ 上場'}
-                    </span>
+                    <span class="status-toggle" onclick="toggleStatus(${p.id}, '${p.name}')">${isOff ? '💤 休息' : '✅ 上場'}</span>
                 </div>
             `;
         }).join('');
+
+        document.getElementById('history-log').innerHTML = history.map(h => `
+            <div class="history-item">
+                <small style="color:#666">${new Date(h.created_at).toLocaleString()}</small><br>
+                ${h.description || (h.total_amt > 0 ? '🔵 藍隊勝' : '🔴 紅隊勝')} : <b>$${h.total_amt}</b>
+            </div>
+        `).join('');
     }
 
     function handlePlayerClick(id) {
@@ -213,10 +239,9 @@
             blueIDs.forEach(id => calcData.push({id, change: -Math.floor(Math.abs(amt) / blueIDs.length)}));
         }
         
-        tempResults = { amt, calcData };
-        document.getElementById('m-title').innerText = amt > 0 ? "🔵 藍隊 獲勝" : "🔴 紅隊 獲勝";
+        tempResults = { amt, calcData, desc: amt > 0 ? "🔵 藍隊獲勝" : "🔴 紅隊獲勝" };
+        document.getElementById('m-title').innerText = tempResults.desc;
         document.getElementById('m-detail').innerHTML = `總金額：$${Math.abs(amt)}<br>` + calcData.map(d => `${players.find(p=>p.id===d.id).name.replace("OFF_","")}: ${d.change>0?'+':''}${d.change}`).join('<br>');
-        
         document.getElementById('modal-footer').innerHTML = `
             <button onclick="confirmUpload()" style="flex:1; padding:12px; background:var(--blue); color:white; border:none; border-radius:8px; font-weight:bold;">確認上傳</button>
             <button onclick="document.getElementById('modal').style.display='none'" style="flex:1; padding:12px; background:#444; color:white; border:none; border-radius:8px;">取消</button>
@@ -229,7 +254,10 @@
             const curP = players.find(p => p.id === d.id);
             await _supabase.from('players').update({ money: curP.money + d.change }).eq('id', d.id);
         }
-        await _supabase.from('history').insert([{ total_amt: tempResults.amt, blue_members: blueIDs, red_members: redIDs }]);
+        await _supabase.from('history').insert([{ 
+            total_amt: tempResults.amt, 
+            description: tempResults.desc + ` (${blueIDs.length}v${redIDs.length})`
+        }]);
         document.getElementById('modal').style.display = 'none';
         resetRound();
     }
