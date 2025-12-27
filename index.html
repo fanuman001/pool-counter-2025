@@ -3,133 +3,141 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>🎱 撞球雲端管理系統 (3X特殊獎勵版)</title>
+    <title>🎱 撞球雲端計分系統 3.0</title>
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
     <style>
-        :root { --blue: #0d47a1; --blue-l: #4fc3f7; --red: #bf360c; --red-l: #ff8a65; --bg: #1a1a1a; --card: #252525; --panel: #111; --gold: #ffd700; }
-        body { font-family: "Microsoft JhengHei", sans-serif; background-color: var(--bg); color: #eee; margin: 0; padding: 15px; }
-        h2 { text-align: center; color: #aaa; margin-bottom: 20px; letter-spacing: 2px; }
+        :root { 
+            --blue: #007bff; --blue-glow: rgba(0, 123, 255, 0.5);
+            --red: #ff4d4d; --red-glow: rgba(255, 77, 77, 0.5);
+            --bg: #0f1216; --card: #1c2229; --panel: #28303a;
+            --gold: #ffc107; --text: #e0e6ed;
+        }
+        body { font-family: "PingFang TC", "Microsoft JhengHei", sans-serif; background-color: var(--bg); color: var(--text); margin: 0; padding: 15px; }
+        h2 { text-align: center; color: #fff; text-shadow: 0 0 10px var(--blue-glow); margin-bottom: 25px; }
+
         .main-layout { display: flex; flex-wrap: wrap; gap: 20px; max-width: 1200px; margin: 0 auto; }
         .column { flex: 1; min-width: 320px; }
-        .card { background: var(--card); padding: 15px; border-radius: 12px; border: 1px solid #333; margin-bottom: 15px; box-shadow: 0 4px 15px rgba(0,0,0,0.4); }
-        .section-header { font-size: 0.9rem; color: #888; font-weight: bold; border-bottom: 1px solid #333; padding-bottom: 8px; margin-bottom: 12px; display: flex; justify-content: space-between; align-items: center; }
-        
-        /* 設定區 */
-        .price-settings { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 20px; }
-        .price-box { background: var(--panel); padding: 8px; border-radius: 10px; text-align: center; border: 1px solid #444; }
-        .price-label { font-size: 0.7rem; color: #777; margin-bottom: 5px; }
-        .price-ctrl { display: flex; align-items: center; justify-content: space-between; padding: 0 5px; }
-        .price-val { font-size: 1.2rem; font-weight: bold; color: #fb8c00; font-family: monospace; }
-        .btn-mini { width: 30px; height: 30px; border-radius: 6px; border: none; background: #444; color: white; cursor: pointer; }
+        .card { background: var(--card); padding: 18px; border-radius: 16px; border: 1px solid #3d4655; margin-bottom: 20px; box-shadow: 0 10px 30px rgba(0,0,0,0.5); }
+        .section-header { font-size: 0.95rem; color: #aab2bd; font-weight: 600; border-bottom: 2px solid #3d4655; padding-bottom: 10px; margin-bottom: 15px; display: flex; justify-content: space-between; }
 
-        /* 出戰與計分 */
-        .player-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(90px, 1fr)); gap: 10px; }
-        .p-btn { padding: 12px 5px; background: #333; border: 2px solid #444; border-radius: 8px; cursor: pointer; text-align: center; font-weight: bold; }
-        .bg-blue { background-color: var(--blue) !important; border-color: var(--blue-l) !important; color: white; transform: scale(1.05); }
-        .bg-red { background-color: var(--red) !important; border-color: var(--red-l) !important; color: white; transform: scale(1.05); }
-        .counter-row { display: flex; justify-content: space-between; align-items: center; background: var(--panel); padding: 10px; border-radius: 8px; margin-bottom: 8px; border-left: 4px solid transparent; }
-        .row-blue { border-left-color: var(--blue); }
-        .row-red { border-left-color: var(--red); }
-        
-        /* 特殊球按鈕 */
-        .ball-toggle { width: 50px; height: 38px; border-radius: 6px; border: 1px solid #444; background: #222; color: #666; cursor: pointer; font-size: 0.8rem; font-weight: bold; }
-        .ball-white.active { background: #eee !important; color: #000 !important; border-color: #fff !important; box-shadow: 0 0 10px #fff; }
-        .ball-black.active { background: #000 !important; color: #fff !important; border-color: #666 !important; box-shadow: 0 0 10px #444; }
+        /* 金額設定區 (鍵盤輸入) */
+        .price-settings { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 12px; margin-bottom: 20px; }
+        .price-box { background: var(--panel); padding: 10px; border-radius: 12px; text-align: center; border: 1px solid #444; transition: 0.3s; }
+        .price-box:focus-within { border-color: var(--blue); box-shadow: 0 0 8px var(--blue-glow); }
+        .price-label { font-size: 0.75rem; color: #8892b0; margin-bottom: 5px; }
+        .price-input { background: transparent; border: none; color: var(--gold); font-size: 1.3rem; font-weight: bold; width: 100%; text-align: center; font-family: monospace; outline: none; }
 
-        .btn-circle { width: 36px; height: 36px; border-radius: 50%; border: none; color: white; cursor: pointer; }
-        .btn-calc { width: 100%; background: linear-gradient(135deg, #6200ea, #3700b3); color: white; padding: 16px; border: none; border-radius: 10px; font-size: 1.2rem; font-weight: bold; cursor: pointer; margin-top: 10px; }
+        /* 出戰球員 */
+        .player-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(95px, 1fr)); gap: 10px; }
+        .p-btn { padding: 15px 5px; background: #2d3748; border: 2px solid #4a5568; border-radius: 10px; cursor: pointer; text-align: center; font-weight: bold; transition: all 0.2s; color: #cbd5e0; }
+        .bg-blue { background-color: var(--blue) !important; border-color: #63b3ed !important; color: white; transform: translateY(-3px); box-shadow: 0 5px 15px var(--blue-glow); }
+        .bg-red { background-color: var(--red) !important; border-color: #feb2b2 !important; color: white; transform: translateY(-3px); box-shadow: 0 5px 15px var(--red-glow); }
+
+        /* 計分行 */
+        .counter-row { display: flex; justify-content: space-between; align-items: center; background: var(--panel); padding: 12px; border-radius: 12px; margin-bottom: 10px; }
+        .btn-circle { width: 40px; height: 40px; border-radius: 50%; border: none; color: white; cursor: pointer; font-size: 1.2rem; display: flex; align-items: center; justify-content: center; transition: active 0.1s; }
+        .btn-circle:active { transform: scale(0.9); }
         
-        /* 列表樣式 */
-        .score-row { display: flex; justify-content: space-between; padding: 10px 0; border-bottom: 1px solid #333; align-items: center; }
-        .history-item { padding: 12px; border-bottom: 1px solid #333; background: #1a1a1a; margin-bottom: 5px; border-radius: 6px; position: relative; }
-        .btn-delete { color: #ff5252; background: none; border: 1px solid #ff5252; padding: 2px 8px; border-radius: 4px; cursor: pointer; font-size: 0.7rem; float: right; margin-top: -2px; }
+        .ball-toggle { width: 50px; height: 40px; border-radius: 8px; border: 1px solid #4a5568; background: #1a202c; color: #718096; cursor: pointer; font-weight: bold; font-size: 0.85rem; }
+        .ball-white.active { background: #edf2f7 !important; color: #2d3748 !important; border-color: #fff !important; box-shadow: 0 0 10px #fff; }
+        .ball-black.active { background: #000 !important; color: #fff !important; border-color: #718096 !important; box-shadow: 0 0 10px #4a5568; }
+
+        /* 下方清單 */
+        .score-row { display: flex; justify-content: space-between; padding: 12px 5px; border-bottom: 1px solid #2d3748; align-items: center; }
+        .history-item { padding: 15px; border-radius: 10px; background: #232a35; margin-bottom: 8px; border-left: 5px solid var(--blue); }
+        .btn-delete { color: var(--red); background: rgba(255, 77, 77, 0.1); border: 1px solid var(--red); padding: 4px 10px; border-radius: 6px; cursor: pointer; font-size: 0.75rem; float: right; }
+        
+        .btn-calc { width: 100%; background: linear-gradient(90deg, #3182ce, #63b3ed); color: white; padding: 18px; border: none; border-radius: 12px; font-size: 1.2rem; font-weight: 800; cursor: pointer; margin-top: 15px; box-shadow: 0 4px 15px rgba(49, 130, 206, 0.4); }
+
+        /* 管理員與彈窗 */
+        #admin-panel { background: #000; padding: 15px; border-radius: 10px; border: 1px solid var(--red); margin-bottom: 15px; }
+        #modal { display: none; position: fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.85); justify-content:center; align-items:center; z-index:999; backdrop-filter: blur(4px); }
+        .modal-box { background: var(--card); padding: 30px; border-radius: 20px; width: 85%; max-width: 350px; text-align: center; border: 1px solid #4a5568; }
     </style>
 </head>
 <body>
 
-    <h2>🎱 撞球雲端管理系統</h2>
+    <h2>🎱 撞球精英管理系統</h2>
 
     <div class="main-layout">
         <div class="column">
             <div class="card">
-                <div class="section-header"><span>1. 出戰成員</span><span id="player-count">0 人</span></div>
+                <div class="section-header"><span>👥 出戰成員</span><span id="player-count">0 人</span></div>
                 <div id="player-buttons" class="player-grid">載入中...</div>
             </div>
 
             <div class="card">
-                <div class="section-header">2. 金額與計分 (雙球 3X)</div>
+                <div class="section-header">⚙️ 本局金額 (點擊數字更改)</div>
                 <div class="price-settings">
                     <div class="price-box">
-                        <div class="price-label">底錢 / 普通球單價</div>
-                        <div class="price-ctrl">
-                            <button class="btn-mini" onclick="adjPrice('base', -50)">-</button>
-                            <span id="display-base" class="price-val">150</span>
-                            <button class="btn-mini" onclick="adjPrice('base', 50)">+</button>
-                        </div>
+                        <div class="price-label">底線金額</div>
+                        <input type="number" id="in-base" class="price-input" value="150">
                     </div>
                     <div class="price-box">
-                        <div class="price-label">特殊球 (X)</div>
-                        <div class="price-ctrl">
-                            <button class="btn-mini" onclick="adjPrice('spec', -10)">-</button>
-                            <span id="display-spec" class="price-val">50</span>
-                            <button class="btn-mini" onclick="adjPrice('spec', 10)">+</button>
-                        </div>
+                        <div class="price-label">普通球單價</div>
+                        <input type="number" id="in-common" class="price-input" value="50">
+                    </div>
+                    <div class="price-box">
+                        <div class="price-label">特殊球(X)</div>
+                        <input type="number" id="in-spec" class="price-input" value="50">
                     </div>
                 </div>
 
-                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 15px;">
-                    <button id="btn-win-a" class="p-btn" style="height:60px" onclick="setWinner('A')">🔵 藍隊 贏底</button>
-                    <button id="btn-win-b" class="p-btn" style="height:60px" onclick="setWinner('B')">🔴 紅隊 贏底</button>
+                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-bottom: 20px;">
+                    <button id="btn-win-a" class="p-btn" style="height:65px" onclick="setWinner('A')">🔵 藍隊 贏底</button>
+                    <button id="btn-win-b" class="p-btn" style="height:65px" onclick="setWinner('B')">🔴 紅隊 贏底</button>
                 </div>
 
-                <div class="counter-row row-blue"><span>🔵 藍隊 (普通 / 特殊)</span>
+                <div class="counter-row">
+                    <span style="color:#63b3ed; font-weight:bold;">🔵 藍隊得分</span>
                     <div style="display:flex; gap:10px; align-items:center;">
-                        <button class="btn-circle" onclick="adjCount('A', -1)" style="background:#444">-</button>
-                        <span id="cnt-a" style="font-weight:bold; font-size:1.1rem; min-width:20px; text-align:center;">0</span>
+                        <button class="btn-circle" onclick="adjCount('A', -1)" style="background:#4a5568">-</button>
+                        <span id="cnt-a" style="font-weight:bold; font-size:1.2rem; min-width:25px; text-align:center;">0</span>
                         <button class="btn-circle" onclick="adjCount('A', 1)" style="background:var(--blue)">+</button>
-                        <button id="spec-a-w" class="ball-toggle ball-white" onclick="toggleBall('A', 'W')">白</button>
-                        <button id="spec-a-b" class="ball-toggle ball-black" onclick="toggleBall('A', 'B')">黑</button>
+                        <button id="spec-a-w" class="ball-toggle ball-white" onclick="toggleBall('A', 'W')">白球</button>
+                        <button id="spec-a-b" class="ball-toggle ball-black" onclick="toggleBall('A', 'B')">黑球</button>
                     </div>
                 </div>
 
-                <div class="counter-row row-red"><span>🔴 紅隊 (普通 / 特殊)</span>
+                <div class="counter-row">
+                    <span style="color:#feb2b2; font-weight:bold;">🔴 紅隊得分</span>
                     <div style="display:flex; gap:10px; align-items:center;">
-                        <button class="btn-circle" onclick="adjCount('B', -1)" style="background:#444">-</button>
-                        <span id="cnt-b" style="font-weight:bold; font-size:1.1rem; min-width:20px; text-align:center;">0</span>
+                        <button class="btn-circle" onclick="adjCount('B', -1)" style="background:#4a5568">-</button>
+                        <span id="cnt-b" style="font-weight:bold; font-size:1.2rem; min-width:25px; text-align:center;">0</span>
                         <button class="btn-circle" onclick="adjCount('B', 1)" style="background:var(--red)">+</button>
-                        <button id="spec-b-w" class="ball-toggle ball-white" onclick="toggleBall('B', 'W')">白</button>
-                        <button id="spec-b-b" class="ball-toggle ball-black" onclick="toggleBall('B', 'B')">黑</button>
+                        <button id="spec-b-w" class="ball-toggle ball-white" onclick="toggleBall('B', 'W')">白球</button>
+                        <button id="spec-b-b" class="ball-toggle ball-black" onclick="toggleBall('B', 'B')">黑球</button>
                     </div>
                 </div>
 
-                <button class="btn-calc" onclick="calculate()">計算並送出</button>
+                <button class="btn-calc" onclick="calculate()">結算並送出資料</button>
             </div>
         </div>
 
         <div class="column">
             <div class="card">
-                <div class="section-header"><span>💰 錢包與管理</span><button onclick="toggleAdmin()">⚙️</button></div>
-                <div id="admin-panel" style="display:none; background:#111; padding:10px; border-radius:8px; margin-bottom:10px;">
-                    <input id="new-p-name" style="width:70%;" placeholder="新球友">
-                    <button onclick="addPlayer()">新增</button>
-                    <button onclick="resetAllMoney()" style="background:#c62828; color:white; border:none; margin-top:5px; width:100%; padding:5px;">⚠️ 全部歸零</button>
+                <div class="section-header">💰 錢包與變動 <button onclick="toggleAdmin()" style="background:none; border:none; color:#4a5568; cursor:pointer;">⚙️</button></div>
+                <div id="admin-panel" style="display:none;">
+                    <input id="new-p-name" style="padding:10px; border-radius:6px; border:none; width:60%;" placeholder="輸入姓名">
+                    <button onclick="addPlayer()" style="padding:10px 15px; background:var(--blue); color:white; border:none; border-radius:6px;">新增球友</button>
+                    <button onclick="resetAllMoney()" style="margin-top:10px; width:100%; padding:10px; background:var(--red); border:none; color:white; border-radius:6px; font-weight:bold;">⚠️ 全部歸零</button>
                 </div>
                 <div id="board">載入中...</div>
             </div>
 
             <div class="card">
-                <div class="section-header">📜 最近紀錄 (可刪單)</div>
-                <div id="history-log" style="max-height:400px; overflow-y:auto;"></div>
+                <div class="section-header">📜 最近紀錄 (管理員可刪單)</div>
+                <div id="history-log" style="max-height:450px; overflow-y:auto;"></div>
             </div>
         </div>
     </div>
 
-    <div id="modal" style="display:none; position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.9); justify-content:center; align-items:center; z-index:9999;">
-        <div style="background:var(--card); padding:25px; border-radius:15px; width:80%; max-width:320px; text-align:center;">
-            <h3 id="m-title"></h3>
-            <div id="m-detail" style="margin:20px 0; color:#ccc;"></div>
-            <button onclick="confirmUpload()" style="width:100%; padding:12px; background:var(--blue); color:white; border:none; border-radius:8px; margin-bottom:10px;">確認送出</button>
-            <button onclick="document.getElementById('modal').style.display='none'" style="width:100%; background:none; border:none; color:#666;">取消</button>
+    <div id="modal">
+        <div class="modal-box">
+            <h2 id="m-title" style="margin-top:0;"></h2>
+            <div id="m-detail" style="line-height:1.8; margin-bottom:25px; color:#aab2bd;"></div>
+            <button onclick="confirmUpload()" style="width:100%; padding:15px; background:var(--blue); color:white; border:none; border-radius:12px; font-weight:bold; font-size:1.1rem;">確認寫入資料庫</button>
+            <button onclick="document.getElementById('modal').style.display='none'" style="width:100%; padding:12px; background:none; border:none; color:#718096; margin-top:10px;">回上一步</button>
         </div>
     </div>
 
@@ -138,9 +146,9 @@
     const SUPABASE_KEY = 'sb_publishable_7y2n8zIopxlKEhcsJ05D2A_U89IFgae';
     const _supabase = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
     
+    const ADMIN_PW = "8888";
     let players = [], history = [], blueIDs = [], redIDs = [], curWinner = null;
     let killsA = 0, killsB = 0, specBalls = { A: { W: false, B: false }, B: { W: false, B: false } };
-    let basePrice = 150, specPrice = 50;
 
     async function init() {
         await fetchLatest();
@@ -154,13 +162,6 @@
         renderUI();
     }
 
-    function adjPrice(type, val) {
-        if(type === 'base') basePrice = Math.max(0, basePrice + val);
-        else specPrice = Math.max(0, specPrice + val);
-        document.getElementById('display-base').innerText = basePrice;
-        document.getElementById('display-spec').innerText = specPrice;
-    }
-
     function toggleBall(team, color) {
         specBalls[team][color] = !specBalls[team][color];
         document.getElementById(`spec-${team.toLowerCase()}-${color.toLowerCase()}`).classList.toggle('active');
@@ -172,18 +173,24 @@
     }
 
     function calculate() {
-        if(!blueIDs.length || !redIDs.length || !curWinner) return alert("請選人與勝負");
+        if(!blueIDs.length || !redIDs.length || !curWinner) return alert("❌ 請選擇參戰人員與勝負隊伍");
         
+        const base = parseInt(document.getElementById('in-base').value);
+        const commonP = parseInt(document.getElementById('in-common').value);
+        const specP = parseInt(document.getElementById('in-spec').value);
+
         const getSpecScore = (team) => {
             const count = (specBalls[team].W ? 1 : 0) + (specBalls[team].B ? 1 : 0);
-            return count === 2 ? specPrice * 3 : (count === 1 ? specPrice : 0);
+            return count === 2 ? specP * 3 : (count === 1 ? specP : 0);
         };
 
-        let commonDiff = (killsA - killsB) * 50; // 普通球預設50
+        let commonDiff = (killsA - killsB) * commonP; 
         let specDiff = getSpecScore('A') - getSpecScore('B');
-        let total = curWinner === 'A' ? (basePrice + commonDiff + specDiff) : -(basePrice - commonDiff - specDiff);
-
+        
+        // 總和 = 底錢 + 普通球差 + 特殊球差
+        let total = curWinner === 'A' ? (base + commonDiff + specDiff) : -(base - commonDiff - specDiff);
         const absTotal = Math.abs(total);
+
         let calcData = [];
         if(total > 0) {
             blueIDs.forEach(id => calcData.push({id, change: Math.floor(absTotal / blueIDs.length)}));
@@ -193,63 +200,72 @@
             blueIDs.forEach(id => calcData.push({id, change: -Math.floor(absTotal / blueIDs.length)}));
         }
 
-        tempResults = { total, calcData, desc: `${total > 0 ? '🔵藍勝':'🔴紅勝'} $${absTotal}` };
+        tempResults = { total, calcData, desc: `${total > 0 ? '🔵 藍隊獲勝':'🔴 紅隊獲勝'} $${absTotal}` };
         document.getElementById('m-title').innerText = tempResults.desc;
-        document.getElementById('m-detail').innerHTML = calcData.map(d => `${players.find(p=>p.id===d.id).name.replace("OFF_","")}: ${d.change>0?'+':''}${d.change}`).join('<br>');
+        document.getElementById('m-detail').innerHTML = `
+            底線:$${base} / 普通球:$${commonP}<br>
+            --------------------------<br>
+            ` + calcData.map(d => {
+                const p = players.find(x=>x.id===d.id);
+                const name = p.name.replace("OFF_","");
+                return `${name}: <b style="color:${d.change>0?'#69f0ae':'#ff5252'}">${d.change>0?'+':''}${d.change}</b>`;
+            }).join('<br>');
         document.getElementById('modal').style.display = 'flex';
     }
 
     async function confirmUpload() {
-        // 1. 更新玩家餘額
         for(let d of tempResults.calcData) {
-            const p = players.find(p => p.id === d.id);
+            const p = players.find(x => x.id === d.id);
             await _supabase.from('players').update({ money: p.money + d.change }).eq('id', d.id);
         }
-        // 2. 存入紀錄 (包含參與人員與變動，方便刪單回滾)
+        const summary = `A:${specBalls.A.W?'白':''}${specBalls.A.B?'黑':''} B:${specBalls.B.W?'白':''}${specBalls.B.B?'黑':''}`;
         await _supabase.from('history').insert([{ 
             total_amt: tempResults.total, 
-            description: tempResults.desc,
+            description: tempResults.desc + ` (${summary})`,
             blue_members: blueIDs, red_members: redIDs,
-            detail_json: JSON.stringify(tempResults.calcData) // 儲存當下每人增減額
+            detail_json: JSON.stringify(tempResults.calcData)
         }]);
         document.getElementById('modal').style.display = 'none';
         resetRound();
     }
 
     async function deleteOrder(hid) {
-        if(!confirm("確定要刪除此單並退回金額嗎？") || prompt("管理密碼") !== "8888") return;
+        if(prompt("請輸入管理員密碼以刪除單據：") !== ADMIN_PW) return alert("密碼錯誤");
         
         const order = history.find(h => h.id === hid);
-        if(!order || !order.detail_json) return alert("舊型紀錄無法自動退回");
+        if(!order || !order.detail_json) return alert("此單據過舊，不支援自動回滾金額");
 
         const details = JSON.parse(order.detail_json);
-        // 回滾金額 (加的變減的，減的變加的)
         for(let d of details) {
-            const p = players.find(p => p.id === d.id);
+            const p = players.find(x => x.id === d.id);
             if(p) await _supabase.from('players').update({ money: p.money - d.change }).eq('id', p.id);
         }
-        // 刪除紀錄
         await _supabase.from('history').delete().eq('id', hid);
-        alert("已刪單並回滾金額");
+        alert("✅ 單據已刪除，金額已退回原錢包");
     }
 
     function renderUI() {
         const active = players.filter(p => !p.name.startsWith("OFF_"));
-        document.getElementById('player-buttons').innerHTML = active.map(p => `<div class="p-btn ${blueIDs.includes(p.id)?'bg-blue':(redIDs.includes(p.id)?'bg-red':'')}" onclick="handlePlayerClick(${p.id})">${p.name}</div>`).join('');
+        document.getElementById('player-buttons').innerHTML = active.map(p => {
+            let cls = "p-btn";
+            if(blueIDs.includes(p.id)) cls += " bg-blue";
+            if(redIDs.includes(p.id)) cls += " bg-red";
+            return `<div class="${cls}" onclick="handlePlayerClick(${p.id})">${p.name}</div>`;
+        }).join('');
         document.getElementById('player-count').innerText = `${blueIDs.length + redIDs.length} 人`;
 
         document.getElementById('board').innerHTML = players.map(p => `
             <div class="score-row">
-                <span>${p.name.replace("OFF_","")}</span>
-                <span style="font-family:monospace; color:${p.money>=0?'#69f0ae':'#ff5252'}">${p.money>0?'+':''}${p.money}</span>
+                <span style="${p.name.startsWith('OFF_')?'color:#4a5568':''}">${p.name.replace("OFF_","")}</span>
+                <span style="font-family:monospace; font-weight:bold; font-size:1.1rem; color:${p.money>=0?'#69f0ae':'#ff5252'}">${p.money>0?'+':''}${p.money}</span>
             </div>
         `).join('');
 
-        document.getElementById('history-log').innerHTML = history.slice(0, 15).map(h => `
+        document.getElementById('history-log').innerHTML = history.slice(0, 20).map(h => `
             <div class="history-item">
-                <button class="btn-delete" onclick="deleteOrder(${h.id})">🗑️ 刪單</button>
-                <small style="color:#666">${new Date(h.created_at).toLocaleTimeString()}</small><br>
-                ${h.description}
+                <button class="btn-delete" onclick="deleteOrder(${h.id})">🗑️ 刪除</button>
+                <small style="color:#718096">${new Date(h.created_at).toLocaleString()}</small><br>
+                <div style="margin-top:5px; font-weight:bold;">${h.description}</div>
             </div>
         `).join('');
     }
@@ -275,15 +291,22 @@
         document.getElementById('btn-win-b').className = w==='B' ? "p-btn bg-red" : "p-btn";
     }
 
-    function toggleAdmin() { document.getElementById('admin-panel').style.display = document.getElementById('admin-panel').style.display==='none'?'block':'none'; }
+    function toggleAdmin() {
+        if(document.getElementById('admin-panel').style.display === 'none') {
+            if(prompt("密碼：") === ADMIN_PW) document.getElementById('admin-panel').style.display = 'block';
+        } else { document.getElementById('admin-panel').style.display = 'none'; }
+    }
+
     async function addPlayer() {
         const n = document.getElementById('new-p-name').value;
         if(n) await _supabase.from('players').insert([{ name: n, money: 0 }]);
     }
+
     async function resetAllMoney() {
-        if(confirm("歸零？") && prompt("密碼")==="8888") {
+        if(confirm("確定要將所有人金額歸零並清空紀錄嗎？") && prompt("輸入管理密碼") === ADMIN_PW) {
             for(let p of players) await _supabase.from('players').update({ money: 0 }).eq('id', p.id);
-            await _supabase.from('history').delete().neq('id', 0); // 清空歷史
+            await _supabase.from('history').delete().neq('id', 0);
+            alert("已全部歸零");
         }
     }
 
