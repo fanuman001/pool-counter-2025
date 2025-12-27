@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>🎱 撞球雲端管理系統 (加倍球增強版)</title>
+    <title>🎱 撞球雲端管理系統 (黑白雙球版)</title>
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
     <style>
         :root { --blue: #0d47a1; --blue-l: #4fc3f7; --red: #bf360c; --red-l: #ff8a65; --bg: #1a1a1a; --card: #252525; --panel: #111; --gold: #ffd700; }
@@ -20,7 +20,7 @@
         .bg-blue { background-color: var(--blue) !important; border-color: var(--blue-l) !important; color: white; transform: scale(1.05); }
         .bg-red { background-color: var(--red) !important; border-color: var(--red-l) !important; color: white; transform: scale(1.05); }
         
-        /* 金額設定區 */
+        /* 金額設定區 (移除倍率，改為特殊球單價) */
         .price-settings { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 10px; margin-bottom: 20px; }
         .price-box { background: var(--panel); padding: 8px; border-radius: 10px; text-align: center; border: 1px solid #444; }
         .price-label { font-size: 0.7rem; color: #777; margin-bottom: 5px; }
@@ -32,11 +32,16 @@
         .counter-row { display: flex; justify-content: space-between; align-items: center; background: var(--panel); padding: 10px; border-radius: 8px; margin-bottom: 8px; border-left: 4px solid transparent; }
         .row-blue { border-left-color: var(--blue); }
         .row-red { border-left-color: var(--red); }
-        .special-label { color: var(--gold); font-size: 0.85rem; font-weight: bold; }
+        
+        /* 特殊球按鈕 */
+        .spec-btn-group { display: flex; gap: 5px; }
+        .ball-toggle { width: 45px; height: 35px; border-radius: 6px; border: 1px solid #444; background: #222; color: #666; cursor: pointer; font-size: 0.8rem; font-weight: bold; transition: 0.3s; }
+        .ball-white.active { background: #eee !important; color: #000 !important; border-color: #fff !important; box-shadow: 0 0 10px #fff; }
+        .ball-black.active { background: #000 !important; color: #fff !important; border-color: #666 !important; box-shadow: 0 0 10px #444; }
+
         .btn-circle { width: 36px; height: 36px; border-radius: 50%; border: none; color: white; cursor: pointer; font-size: 1.2rem; }
         .btn-calc { width: 100%; background: linear-gradient(135deg, #6200ea, #3700b3); color: white; padding: 16px; border: none; border-radius: 10px; font-size: 1.2rem; font-weight: bold; cursor: pointer; margin-top: 10px; }
         
-        /* 錢包 */
         .score-row { display: flex; justify-content: space-between; padding: 12px 0; border-bottom: 1px solid #333; align-items: center; }
         .win-rate { font-size: 0.75rem; color: #666; margin-right: 8px; }
         .money-badge { cursor: pointer; padding: 4px 10px; border-radius: 6px; background: rgba(255,255,255,0.05); font-family: monospace; font-size: 1.1rem; min-width: 65px; text-align: right; }
@@ -63,7 +68,7 @@
             </div>
 
             <div class="card">
-                <div class="section-header">2. 本局設定 (含加倍球)</div>
+                <div class="section-header">2. 本局設定</div>
                 <div class="price-settings">
                     <div class="price-box">
                         <div class="price-label">底錢</div>
@@ -74,19 +79,19 @@
                         </div>
                     </div>
                     <div class="price-box">
-                        <div class="price-label">普通球</div>
+                        <div class="price-label">特殊球(X)</div>
                         <div class="price-ctrl">
-                            <button class="btn-mini" onclick="adjPrice('ball', -10)">-</button>
-                            <span id="display-ball" class="price-val">50</span>
-                            <button class="btn-mini" onclick="adjPrice('ball', 10)">+</button>
+                            <button class="btn-mini" onclick="adjPrice('spec', -10)">-</button>
+                            <span id="display-spec" class="price-val">50</span>
+                            <button class="btn-mini" onclick="adjPrice('spec', 10)">+</button>
                         </div>
                     </div>
-                    <div class="price-box">
-                        <div class="price-label">加倍率</div>
+                    <div class="price-box" title="雙球同時進洞的獎勵倍數">
+                        <div class="price-label">雙球獎勵</div>
                         <div class="price-ctrl">
-                            <button class="btn-mini" onclick="adjPrice('mult', -0.1)">-</button>
-                            <span id="display-mult" class="price-val">1.3</span>
-                            <button class="btn-mini" onclick="adjPrice('mult', 0.1)">+</button>
+                            <button class="btn-mini" onclick="adjPrice('bonus', -1)">-</button>
+                            <span id="display-bonus" class="price-val">3</span>
+                            <button class="btn-mini" onclick="adjPrice('bonus', 1)">+</button>
                         </div>
                     </div>
                 </div>
@@ -96,27 +101,37 @@
                     <button id="btn-win-b" class="p-btn" style="height:60px" onclick="setWinner('B')">🔴 紅隊 贏底</button>
                 </div>
 
-                <div class="counter-row row-blue"><span>藍進普通球</span><div>
-                    <button class="btn-circle" onclick="adjCount('A', -1)" style="background:#444">-</button>
-                    <span id="cnt-a" style="margin:0 12px; font-weight:bold; font-size:1.2rem;">0</span>
-                    <button class="btn-circle" onclick="adjCount('A', 1)" style="background:var(--blue)">+</button>
-                </div></div>
-                <div class="counter-row row-red" style="margin-bottom:15px;"><span>紅進普通球</span><div>
-                    <button class="btn-circle" onclick="adjCount('B', -1)" style="background:#444">-</button>
-                    <span id="cnt-b" style="margin:0 12px; font-weight:bold; font-size:1.2rem;">0</span>
-                    <button class="btn-circle" onclick="adjCount('B', 1)" style="background:var(--red)">+</button>
-                </div></div>
+                <div class="counter-row row-blue">
+                    <span>藍隊普通球</span>
+                    <div>
+                        <button class="btn-circle" onclick="adjCount('A', -1)" style="background:#444">-</button>
+                        <span id="cnt-a" style="margin:0 12px; font-weight:bold; font-size:1.2rem;">0</span>
+                        <button class="btn-circle" onclick="adjCount('A', 1)" style="background:var(--blue)">+</button>
+                    </div>
+                </div>
+                <div class="counter-row row-red" style="margin-bottom:15px;">
+                    <span>紅隊普通球</span>
+                    <div>
+                        <button class="btn-circle" onclick="adjCount('B', -1)" style="background:#444">-</button>
+                        <span id="cnt-b" style="margin:0 12px; font-weight:bold; font-size:1.2rem;">0</span>
+                        <button class="btn-circle" onclick="adjCount('B', 1)" style="background:var(--red)">+</button>
+                    </div>
+                </div>
 
-                <div class="counter-row row-blue"><span class="special-label">⭐ 藍進加倍球</span><div>
-                    <button class="btn-circle" onclick="adjSpecial('A', -1)" style="background:#444">-</button>
-                    <span id="spec-a" style="margin:0 12px; font-weight:bold; font-size:1.2rem; color:var(--gold);">0</span>
-                    <button class="btn-circle" onclick="adjSpecial('A', 1)" style="background:var(--blue)">+</button>
-                </div></div>
-                <div class="counter-row row-red"><span class="special-label">⭐ 紅進加倍球</span><div>
-                    <button class="btn-circle" onclick="adjSpecial('B', -1)" style="background:#444">-</button>
-                    <span id="spec-b" style="margin:0 12px; font-weight:bold; font-size:1.2rem; color:var(--gold);">0</span>
-                    <button class="btn-circle" onclick="adjSpecial('B', 1)" style="background:var(--red)">+</button>
-                </div></div>
+                <div class="counter-row row-blue">
+                    <span>🔵 藍隊特殊球</span>
+                    <div class="spec-btn-group">
+                        <button id="spec-a-w" class="ball-toggle ball-white" onclick="toggleBall('A', 'W')">白球</button>
+                        <button id="spec-a-b" class="ball-toggle ball-black" onclick="toggleBall('A', 'B')">黑球</button>
+                    </div>
+                </div>
+                <div class="counter-row row-red">
+                    <span>🔴 紅隊特殊球</span>
+                    <div class="spec-btn-group">
+                        <button id="spec-b-w" class="ball-toggle ball-white" onclick="toggleBall('B', 'W')">白球</button>
+                        <button id="spec-b-b" class="ball-toggle ball-black" onclick="toggleBall('B', 'B')">黑球</button>
+                    </div>
+                </div>
 
                 <button class="btn-calc" onclick="calculate()">計算並送出</button>
             </div>
@@ -159,8 +174,9 @@
     
     const ADMIN_PASSWORD = "8888";
     let players = [], history = [], blueIDs = [], redIDs = [], curWinner = null;
-    let killsA = 0, killsB = 0, specA = 0, specB = 0;
-    let basePrice = 150, ballPrice = 50, multiplier = 1.3;
+    let killsA = 0, killsB = 0;
+    let specBalls = { A: { W: false, B: false }, B: { W: false, B: false } };
+    let basePrice = 150, commonBallPrice = 50, specBallPrice = 50, bonusMult = 3;
 
     async function init() {
         await fetchLatest();
@@ -188,12 +204,12 @@
 
     function adjPrice(type, val) {
         if(type === 'base') basePrice = Math.max(0, basePrice + val);
-        else if(type === 'ball') ballPrice = Math.max(0, ballPrice + val);
-        else multiplier = Math.max(1, parseFloat((multiplier + val).toFixed(1)));
+        else if(type === 'spec') specBallPrice = Math.max(0, specBallPrice + val);
+        else if(type === 'bonus') bonusMult = Math.max(1, bonusMult + val);
         
         document.getElementById('display-base').innerText = basePrice;
-        document.getElementById('display-ball').innerText = ballPrice;
-        document.getElementById('display-mult').innerText = multiplier;
+        document.getElementById('display-spec').innerText = specBallPrice;
+        document.getElementById('display-bonus').innerText = bonusMult;
     }
 
     function adjCount(t, v) { 
@@ -201,127 +217,54 @@
         document.getElementById('cnt-a').innerText = killsA; document.getElementById('cnt-b').innerText = killsB;
     }
 
-    function adjSpecial(t, v) {
-        if(t==='A') specA = Math.max(0, specA + v); else specB = Math.max(0, specB + v);
-        document.getElementById('spec-a').innerText = specA; document.getElementById('spec-b').innerText = specB;
-    }
-
-    function checkAuth() {
-        const pw = prompt("請輸入管理員密碼：");
-        return pw === ADMIN_PASSWORD;
-    }
-
-    function toggleAdmin() {
-        const panel = document.getElementById('admin-panel');
-        if (panel.style.display !== 'block') {
-            if (!checkAuth()) return alert("密碼錯誤");
-            panel.style.display = 'block';
-        } else { panel.style.display = 'none'; }
-    }
-
-    async function toggleStatus(id, currentName) {
-        let newName = currentName.startsWith("OFF_") ? currentName.replace("OFF_", "") : "OFF_" + currentName;
-        await _supabase.from('players').update({ name: newName }).eq('id', id);
-    }
-
-    async function editMoney(id, name, currentMoney) {
-        if (!checkAuth()) return;
-        const newVal = prompt(`修改 ${name.replace("OFF_","")} 的金額：`, currentMoney);
-        if (newVal === null || newVal === "" || isNaN(newVal)) return;
-        const changeVal = parseInt(newVal);
-        await _supabase.from('players').update({ money: changeVal }).eq('id', id);
-        await _supabase.from('history').insert([{ total_amt: changeVal - currentMoney, description: `[手動調整] ${name.replace("OFF_","")}: ${currentMoney} -> ${changeVal}` }]);
-    }
-
-    async function resetAllMoney() {
-        if (!confirm("確定要將所有人的金額歸零嗎？")) return;
-        if (!checkAuth()) return;
-        for (let p of players) { await _supabase.from('players').update({ money: 0 }).eq('id', p.id); }
-        await _supabase.from('history').insert([{ total_amt: 0, description: "⚠️ 管理員執行：一鍵全體歸零" }]);
-    }
-
-    function renderUI() {
-        const active = players.filter(p => !p.name.startsWith("OFF_"));
-        document.getElementById('player-buttons').innerHTML = active.map(p => {
-            let cls = "p-btn";
-            if(blueIDs.includes(p.id)) cls += " bg-blue";
-            if(redIDs.includes(p.id)) cls += " bg-red";
-            return `<div class="${cls}" onclick="handlePlayerClick(${p.id})">${p.name}</div>`;
-        }).join('');
-        document.getElementById('player-count').innerText = `${blueIDs.length + redIDs.length} 人`;
-
-        document.getElementById('board').innerHTML = players.map(p => {
-            const cleanName = p.name.replace("OFF_", "");
-            return `
-                <div class="score-row">
-                    <span>${cleanName}</span>
-                    <div style="display: flex; align-items: center;">
-                        <span class="win-rate">${getWinRate(p.id)}</span>
-                        <span class="money-badge ${p.money >= 0 ? 'text-plus' : 'text-minus'}" onclick="editMoney(${p.id}, '${p.name}', ${p.money})">
-                            ${p.money > 0 ? '+' : ''}${p.money}
-                        </span>
-                    </div>
-                </div>
-            `;
-        }).join('');
-
-        document.getElementById('admin-list').innerHTML = players.map(p => {
-            const isOff = p.name.startsWith("OFF_");
-            return `
-                <div class="admin-row">
-                    <span>${p.name.replace("OFF_","")}</span>
-                    <span class="status-toggle" onclick="toggleStatus(${p.id}, '${p.name}')">${isOff ? '💤' : '✅'}</span>
-                </div>
-            `;
-        }).join('');
-
-        document.getElementById('history-log').innerHTML = history.slice(0, 15).map(h => `
-            <div class="history-item">
-                <small style="color:#666">${new Date(h.created_at).toLocaleTimeString()}</small><br>
-                ${h.description || (h.total_amt > 0 ? '🔵 藍勝' : '🔴 紅勝')} <b style="float:right; color:${h.total_amt>=0?'#69f0ae':'#ff5252'}">$${h.total_amt}</b>
-            </div>
-        `).join('');
-    }
-
-    function handlePlayerClick(id) {
-        if(blueIDs.includes(id)) { blueIDs = blueIDs.filter(i => i !== id); redIDs.push(id); }
-        else if(redIDs.includes(id)) { redIDs = redIDs.filter(i => i !== id); }
-        else { blueIDs.push(id); }
-        renderUI();
-    }
-    
-    function setWinner(w) { 
-        curWinner = w; 
-        document.getElementById('btn-win-a').className = w==='A' ? "p-btn bg-blue" : "p-btn";
-        document.getElementById('btn-win-b').className = w==='B' ? "p-btn bg-red" : "p-btn";
+    function toggleBall(team, color) {
+        specBalls[team][color] = !specBalls[team][color];
+        const btn = document.getElementById(`spec-${team.toLowerCase()}-${color.toLowerCase()}`);
+        if(specBalls[team][color]) btn.classList.add('active'); else btn.classList.remove('active');
     }
 
     function calculate() {
         if(!blueIDs.length || !redIDs.length || !curWinner) return alert("請選人與勝負");
         
-        // 藍隊總分: (普通球 * 單價) + (加倍球 * 單價 * 倍率)
-        let scoreA = (killsA * ballPrice) + (specA * ballPrice * multiplier);
-        // 紅隊總分: (普通球 * 單價) + (加倍球 * 單價 * 倍率)
-        let scoreB = (killsB * ballPrice) + (specB * ballPrice * multiplier);
-        
-        let amt = 0;
-        if(curWinner === 'A') amt = basePrice + scoreA - scoreB;
-        else amt = -(basePrice + scoreB - scoreA);
-        
-        amt = Math.round(amt); // 四捨五入取整
+        // 計算特殊球分數邏輯
+        function calcSpecScore(team) {
+            const hasW = specBalls[team].W;
+            const hasB = specBalls[team].B;
+            if (hasW && hasB) return specBallPrice * bonusMult; // 雙球大獎
+            if (hasW || hasB) return specBallPrice; // 單球
+            return 0;
+        }
 
+        let specScoreA = calcSpecScore('A');
+        let specScoreB = calcSpecScore('B');
+        
+        // 總金額 = 底錢 + (藍普通球-紅普通球)*50 + (藍特殊-紅特殊)
+        let commonScore = (killsA - killsB) * commonBallPrice;
+        let finalSpecDiff = specScoreA - specScoreB;
+
+        let totalAmt = 0;
+        if(curWinner === 'A') totalAmt = basePrice + commonScore + finalSpecDiff;
+        else totalAmt = -(basePrice - commonScore - finalSpecDiff);
+        
         let calcData = [];
-        if(amt > 0) {
-            blueIDs.forEach(id => calcData.push({id, change: Math.floor(amt / blueIDs.length)}));
-            redIDs.forEach(id => calcData.push({id, change: -Math.floor(amt / redIDs.length)}));
+        const absAmt = Math.abs(totalAmt);
+        if(totalAmt > 0) {
+            blueIDs.forEach(id => calcData.push({id, change: Math.floor(absAmt / blueIDs.length)}));
+            redIDs.forEach(id => calcData.push({id, change: -Math.floor(absAmt / redIDs.length)}));
         } else {
-            redIDs.forEach(id => calcData.push({id, change: Math.floor(Math.abs(amt) / redIDs.length)}));
-            blueIDs.forEach(id => calcData.push({id, change: -Math.floor(Math.abs(amt) / blueIDs.length)}));
+            redIDs.forEach(id => calcData.push({id, change: Math.floor(absAmt / redIDs.length)}));
+            blueIDs.forEach(id => calcData.push({id, change: -Math.floor(absAmt / blueIDs.length)}));
         }
         
-        tempResults = { amt, calcData, desc: amt > 0 ? "🔵 藍隊獲勝" : "🔴 紅隊獲勝" };
+        tempResults = { totalAmt, calcData, desc: totalAmt > 0 ? "🔵 藍隊獲勝" : "🔴 紅隊獲勝" };
         document.getElementById('m-title').innerText = tempResults.desc;
-        document.getElementById('m-detail').innerHTML = `底錢 $${basePrice} / 倍率 ${multiplier}x<br>總結算：$${Math.abs(amt)}<br>` + calcData.map(d => `${players.find(p=>p.id===d.id).name.replace("OFF_","")}: ${d.change>0?'+':''}${d.change}`).join('<br>');
+        document.getElementById('m-detail').innerHTML = `
+            結算明細：<br>
+            普通球差額：$${commonScore}<br>
+            特殊球差額：$${finalSpecDiff}<br>
+            <b>總計金額：$${absAmt}</b><br><br>
+            ` + calcData.map(d => `${players.find(p=>p.id===d.id).name.replace("OFF_","")}: ${d.change>0?'+':''}${d.change}`).join('<br>');
+        
         document.getElementById('modal-footer').innerHTML = `<button onclick="confirmUpload()" style="flex:1; padding:12px; background:var(--blue); color:white; border:none; border-radius:8px; font-weight:bold;">確認</button><button onclick="document.getElementById('modal').style.display='none'" style="flex:1; padding:12px; background:#444; color:white; border:none; border-radius:8px;">取消</button>`;
         document.getElementById('modal').style.display = 'flex';
     }
@@ -331,9 +274,10 @@
             const curP = players.find(p => p.id === d.id);
             await _supabase.from('players').update({ money: curP.money + d.change }).eq('id', d.id);
         }
+        const specSummary = `A:${specBalls.A.W?'白':''}${specBalls.A.B?'黑':''} B:${specBalls.B.W?'白':''}${specBalls.B.B?'黑':''}`;
         await _supabase.from('history').insert([{ 
-            total_amt: tempResults.amt, 
-            description: tempResults.desc + ` (加倍:${multiplier}x)`,
+            total_amt: tempResults.totalAmt, 
+            description: tempResults.desc + ` (${specSummary})`,
             blue_members: blueIDs, red_members: redIDs
         }]);
         document.getElementById('modal').style.display = 'none';
@@ -341,18 +285,67 @@
     }
 
     function resetRound() {
-        blueIDs = []; redIDs = []; curWinner = null; killsA = 0; killsB = 0; specA = 0; specB = 0;
+        blueIDs = []; redIDs = []; curWinner = null; killsA = 0; killsB = 0;
+        specBalls = { A: { W: false, B: false }, B: { W: false, B: false } };
+        document.querySelectorAll('.ball-toggle').forEach(b => b.classList.remove('active'));
         document.getElementById('cnt-a').innerText = 0; document.getElementById('cnt-b').innerText = 0;
-        document.getElementById('spec-a').innerText = 0; document.getElementById('spec-b').innerText = 0;
         setWinner(null); renderUI();
     }
 
+    // --- 以下為通用管理功能 ---
+    function toggleAdmin() {
+        const panel = document.getElementById('admin-panel');
+        if (panel.style.display !== 'block') {
+            const pw = prompt("管理員密碼：");
+            if(pw !== ADMIN_PASSWORD) return alert("錯誤");
+            panel.style.display = 'block';
+        } else { panel.style.display = 'none'; }
+    }
+    async function toggleStatus(id, name) {
+        let newName = name.startsWith("OFF_") ? name.replace("OFF_", "") : "OFF_" + name;
+        await _supabase.from('players').update({ name: newName }).eq('id', id);
+    }
+    async function editMoney(id, name, cur) {
+        const pw = prompt("管理員密碼："); if(pw !== ADMIN_PASSWORD) return;
+        const v = prompt(`${name} 修改為：`, cur); if(!v) return;
+        await _supabase.from('players').update({ money: parseInt(v) }).eq('id', id);
+    }
+    async function resetAllMoney() {
+        if(!confirm("確定歸零？")) return;
+        for (let p of players) await _supabase.from('players').update({ money: 0 }).eq('id', p.id);
+    }
     async function addPlayer() {
-        const nameInput = document.getElementById('new-p-name');
-        const name = nameInput.value.trim();
-        if(!name) return alert("請輸入姓名");
-        await _supabase.from('players').insert([{ name: name, money: 0 }]);
-        nameInput.value = "";
+        const n = document.getElementById('new-p-name').value;
+        if(n) await _supabase.from('players').insert([{ name: n, money: 0 }]);
+    }
+    function setWinner(w) { 
+        curWinner = w; 
+        document.getElementById('btn-win-a').className = w==='A' ? "p-btn bg-blue" : "p-btn";
+        document.getElementById('btn-win-b').className = w==='B' ? "p-btn bg-red" : "p-btn";
+    }
+    function renderUI() {
+        const active = players.filter(p => !p.name.startsWith("OFF_"));
+        document.getElementById('player-buttons').innerHTML = active.map(p => {
+            let cls = "p-btn";
+            if(blueIDs.includes(p.id)) cls += " bg-blue";
+            if(redIDs.includes(p.id)) cls += " bg-red";
+            return `<div class="${cls}" onclick="handlePlayerClick(${p.id})">${p.name}</div>`;
+        }).join('');
+        document.getElementById('board').innerHTML = players.map(p => `
+            <div class="score-row">
+                <span>${p.name.replace("OFF_", "")}</span>
+                <div><span class="win-rate">${getWinRate(p.id)}</span>
+                <span class="money-badge ${p.money>=0?'text-plus':'text-minus'}" onclick="editMoney(${p.id},'${p.name}',${p.money})">${p.money>0?'+':''}${p.money}</span></div>
+            </div>
+        `).join('');
+        document.getElementById('admin-list').innerHTML = players.map(p => `<div style="display:flex; justify:space-between; margin-bottom:5px;"><span>${p.name}</span><button onclick="toggleStatus(${p.id},'${p.name}')">切換狀態</button></div>`).join('');
+        document.getElementById('history-log').innerHTML = history.slice(0,10).map(h => `<div class="history-item">${h.description} <b style="float:right">${h.total_amt}</b></div>`).join('');
+    }
+    function handlePlayerClick(id) {
+        if(blueIDs.includes(id)) { blueIDs = blueIDs.filter(i => i !== id); redIDs.push(id); }
+        else if(redIDs.includes(id)) { redIDs = redIDs.filter(i => i !== id); }
+        else { blueIDs.push(id); }
+        renderUI();
     }
     init();
 </script>
