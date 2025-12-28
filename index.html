@@ -38,7 +38,7 @@
 </head>
 <body>
 
-    <h2 style="text-align:center; color: var(--gold); letter-spacing: 8px; margin: 20px 0;">🎱 ELITE PRO <span style="font-size:0.8rem; color: #555;">v5.1 ADMIN</span></h2>
+    <h2 style="text-align:center; color: var(--gold); letter-spacing: 8px; margin: 20px 0;">🎱 ELITE PRO <span style="font-size:0.8rem; color: #555;">v5.2 ADMIN</span></h2>
 
     <div class="main-layout">
         <div class="column">
@@ -109,6 +109,10 @@
         { id: 't1', name: '藍隊', color: '#0084ff', members: [], kills: 0, eggs: [], eggLimit: 2, win: false },
         { id: 't2', name: '紅隊', color: '#ff3333', members: [], kills: 0, eggs: [], eggLimit: 2, win: false }
     ];
+    
+    // 連續隊伍監控
+    let lastTeamsSnapshot = "";
+    let sameTeamCount = 0;
 
     async function init() {
         await fetchData();
@@ -144,7 +148,7 @@
                     <span>擊球: <b style="color:${t.color}; font-size:1.5rem;">${t.kills}</b></span>
                     <div>
                         <button onclick="adjKills('${t.id}',-1)" style="width:35px; background:#333; color:white; border:none; border-radius:5px;">-</button>
-                        <button onclick="adjKills('${t.id}',1)" style="width:35px; background:${t.color}; color:white; border:none; border-radius:5px;">+</button>
+                        <button onclick="adjKills('${t.id}',1)" style="width:35px; background:${t.color}; color:white; border:none; border-radius:4px;">+</button>
                     </div>
                 </div>
                 <div class="egg-group">
@@ -191,7 +195,7 @@
             t.eggs.splice(existIdx, 1);
         } else {
             let mul = 1;
-            if (idx === 1) { mul = 3; } // 第二顆自動 3 倍
+            if (idx === 1) { mul = 3; } 
             else if (idx >= 2) {
                 mul = prompt("這是第 " + (idx+1) + " 顆彩蛋，請輸入獎金倍數：", "2");
                 if (mul === null) return;
@@ -229,6 +233,16 @@
         const eggP = parseInt(document.getElementById('cfg-egg').value);
         let results = [];
         const activeT = teams.filter(t => t.members.length > 0);
+        
+        // 檢查分隊是否重複
+        const currentSnapshot = teams.map(t => t.members.sort().join(",")).join("|");
+        if(currentSnapshot === lastTeamsSnapshot) {
+            sameTeamCount++;
+        } else {
+            sameTeamCount = 1;
+            lastTeamsSnapshot = currentSnapshot;
+        }
+
         activeT.forEach(t => {
             let profit = 0;
             const tEggScore = t.eggs.reduce((sum, e) => sum + (e.mul * eggP), 0);
@@ -242,6 +256,7 @@
             const perP = Math.floor(profit / t.members.length);
             t.members.forEach(pid => results.push({ id: pid, name: players.find(x=>x.id===pid).name.replace("OFF_",""), change: perP }));
         });
+        
         tempSubmit = { results, desc: `⚔️ 對局 | ` + results.map(r=>`${r.name}: ${r.change>=0?'+':''}${r.change}`).join(', ') };
         document.getElementById('modal-content').innerHTML = `
             <h3 style="color:var(--gold)">結算確認</h3>
@@ -260,7 +275,15 @@
             await _db.from('players').update({ money: p.money + r.change }).eq('id', p.id);
         }
         await _db.from('history').insert([{ description: tempSubmit.desc }]);
-        teams.forEach(t => { t.kills = 0; t.eggs = []; t.win = false; t.members = []; });
+        
+        // 檢查連續相同分隊提醒
+        if(sameTeamCount >= 3) {
+            setTimeout(() => {
+                alert(`⚠️ 注意：當前分隊已連續維持 ${sameTeamCount} 局！\n為了公平性與樂趣，建議點擊「隨機分隊」更換陣容。`);
+            }, 500);
+        }
+
+        teams.forEach(t => { t.kills = 0; t.eggs = []; t.win = false; }); // 不清除 members，讓用戶決定是否更換
         closeModal(); fetchData();
     }
 
@@ -277,6 +300,9 @@
                 document.querySelectorAll('.p-btn').forEach(b => b.classList.remove('slot-machine'));
                 const shuffle = [...active].sort(() => Math.random() - 0.5);
                 shuffle.forEach((p, i) => teams[i % teams.length].members.push(p.id));
+                // 重置計數器
+                sameTeamCount = 0; 
+                lastTeamsSnapshot = "";
                 render();
             }
         }, 60);
@@ -332,7 +358,22 @@
     function removeTeam(id) { if(teams.length > 2) { teams = teams.filter(t => t.id !== id); render(); } }
     async function toggleRest(id, name) { const newName = name.startsWith("OFF_") ? name.replace("OFF_","") : "OFF_" + name; await _db.from('players').update({ name: newName }).eq('id', id); fetchData(); }
     async function addPlayer() { const n = document.getElementById('new-p-name').value; if(n) { await _db.from('players').insert([{ name: n, money: 0 }]); document.getElementById('new-p-name').value = ''; fetchData(); } }
-    function handlePlayerClick(pid) { let tidx = teams.findIndex(t => t.members.includes(pid)); if (tidx !== -1) { teams[tidx].members = teams[tidx].members.filter(id => id !== pid); if (tidx + 1 < teams.length) teams[tidx + 1].members.push(pid); } else { teams[0].members.push(pid); } render(); }
+    
+    function handlePlayerClick(pid) { 
+        // 只要有點擊更換隊伍，就重置連續計數
+        sameTeamCount = 0; 
+        lastTeamsSnapshot = "";
+        
+        let tidx = teams.findIndex(t => t.members.includes(pid)); 
+        if (tidx !== -1) { 
+            teams[tidx].members = teams[tidx].members.filter(id => id !== pid); 
+            if (tidx + 1 < teams.length) teams[tidx + 1].members.push(pid); 
+        } else { 
+            teams[0].members.push(pid); 
+        } 
+        render(); 
+    }
+
     function setWinner(tid) { teams.forEach(t=>t.win=(t.id===tid)); render(); }
     function adjKills(tid, v) { const t=teams.find(x=>x.id===tid); t.kills=Math.max(0,t.kills+v); render(); }
     function addEggSlot(tid) { teams.find(x=>x.id===tid).eggLimit++; render(); }
