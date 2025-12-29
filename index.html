@@ -1,123 +1,76 @@
 <!DOCTYPE html>
-<html lang="zh-TW">
+<html>
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>🎱 ELITE PRO v11</title>
-    <script src="https://unpkg.com/@supabase/supabase-js@2"></script>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>🎱 直連版 v12</title>
     <style>
-        body { background: #000; color: #fff; font-family: sans-serif; margin: 0; padding: 15px; }
-        .card { background: #151515; border: 1px solid #333; padding: 15px; border-radius: 10px; margin-bottom: 15px; }
-        .grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; }
-        .item { padding: 15px 5px; background: #222; border: 2px solid #444; border-radius: 8px; text-align: center; font-weight: bold; }
-        .t1 { border-color: #0084ff; color: #0084ff; }
-        .t2 { border-color: #ff3333; color: #ff3333; }
-        .win { background: #ffd700 !important; color: #000 !important; border-color: #fff !important; }
-        button { cursor: pointer; }
-        #loading { position: fixed; inset: 0; background: #000; display: flex; align-items: center; justify-content: center; z-index: 100; }
+        body { background: #000; color: #fff; font-family: sans-serif; padding: 20px; }
+        .player-card { border: 1px solid #444; padding: 10px; margin: 5px 0; display: flex; justify-content: space-between; align-items: center; }
+        .btn { padding: 10px; border: none; border-radius: 5px; font-weight: bold; cursor: pointer; }
+        #log { font-size: 12px; color: #888; background: #111; padding: 10px; margin-top: 20px; white-space: pre-wrap; }
     </style>
 </head>
 <body>
 
-<div id="loading"><h1>🚀 載入資料中...</h1></div>
-
-<div id="main" style="display:none;">
-    <div class="card">
-        <h3>👥 選擇球員 (藍/紅/無)</h3>
-        <div id="p-list" class="grid"></div>
-    </div>
-
-    <div class="card">
-        <h3>🏆 誰贏了？</h3>
-        <div style="display:flex; gap:10px;">
-            <button id="btn-t1" onclick="setWin(1)" style="flex:1; padding:15px; background:#0084ff; border:none; border-radius:5px; font-weight:bold; color:white;">藍隊贏</button>
-            <button id="btn-t2" onclick="setWin(2)" style="flex:1; padding:15px; background:#ff3333; border:none; border-radius:5px; font-weight:bold; color:white;">紅隊贏</button>
-        </div>
-        <div style="margin-top:15px;">
-            <label>底金: <input id="v-base" type="number" value="75" style="width:50px;"></label>
-        </div>
-        <button onclick="submit()" style="width:100%; margin-top:15px; padding:18px; background:#00ff88; color:#000; font-weight:bold; border:none; border-radius:8px; font-size:18px;">🚀 送出計分</button>
-    </div>
-
-    <div class="card">
-        <h3>💎 錢包排名</h3>
-        <div id="w-list"></div>
-    </div>
-</div>
+    <h2 id="status">📡 正在直連伺服器...</h2>
+    <div id="player-list"></div>
+    <div id="log">系統診斷日誌：</div>
 
 <script>
-    const URL = 'https://nzuxyiefpenwuqudajdw.supabase.co';
+    const URL = 'https://nzuxyiefpenwuqudajdw.supabase.co/rest/v1/players?select=*';
     const KEY = 'sb_publishable_7y2n8zIopxlKEhcsJ05D2A_U89IFgae';
-    const _db = supabase.createClient(URL, KEY);
+    const logEl = document.getElementById('log');
 
-    let players = [], t1 = [], t2 = [], win = 0;
+    function addLog(msg) {
+        logEl.innerText += "\n" + new Date().toLocaleTimeString() + ": " + msg;
+    }
 
-    async function load() {
-        const { data, error } = await _db.from('players').select('*');
-        if (data) {
-            players = data;
-            document.getElementById('loading').style.display = 'none';
-            document.getElementById('main').style.display = 'block';
-            render();
-        } else {
-            document.querySelector('#loading h1').innerText = "❌ 連線失敗: " + (error ? error.message : "未知原因");
+    async function fetchData() {
+        addLog("開始發起請求...");
+        try {
+            const response = await fetch(URL, {
+                method: 'GET',
+                headers: {
+                    'apikey': KEY,
+                    'Authorization': 'Bearer ' + KEY,
+                    'Content-Type': 'application/json'
+                }
+            });
+
+            addLog("伺服器已回應，狀態碼: " + response.status);
+
+            if (!response.ok) {
+                const errText = await response.text();
+                throw new Error("HTTP 錯誤 " + response.status + ": " + errText);
+            }
+
+            const data = await response.json();
+            addLog("成功解析 JSON，資料筆數: " + data.length);
+            
+            document.getElementById('status').innerText = "✅ 連線成功";
+            render(data);
+
+        } catch (error) {
+            addLog("❌ 發生異常: " + error.message);
+            document.getElementById('status').innerText = "❌ 連線失敗";
+            document.getElementById('status').style.color = "red";
         }
     }
 
-    function render() {
-        // 球員選單
-        const active = players.filter(p => !p.name.startsWith('OFF_'));
-        document.getElementById('p-list').innerHTML = active.map(p => {
-            let cls = t1.includes(p.id) ? 't1' : (t2.includes(p.id) ? 't2' : '');
-            return `<div class="item ${cls}" onclick="toggle(${p.id})">${p.name}</div>`;
-        }).join('');
-
-        // 贏家按鈕高亮
-        document.getElementById('btn-t1').className = (win === 1 ? 'win' : '');
-        document.getElementById('btn-t2').className = (win === 2 ? 'win' : '');
-
-        // 錢包清單
-        document.getElementById('w-list').innerHTML = players.sort((a,b)=>b.money-a.money).map(p => `
-            <div style="display:flex; justify-content:space-between; padding:10px 0; border-bottom:1px solid #333;">
-                <span style="${p.name.startsWith('OFF_')?'color:#444':''}">${p.name.replace('OFF_','')}</span>
-                <b style="color:${p.money>=0?'#00ff88':'#ff3333'}">${p.money}</b>
+    function render(players) {
+        const list = document.getElementById('player-list');
+        list.innerHTML = players.map(p => `
+            <div class="player-card">
+                <span>${p.name.replace('OFF_','')}</span>
+                <b style="color:#0f8">${p.money}</b>
             </div>
         `).join('');
     }
 
-    function toggle(id) {
-        if (t1.includes(id)) { t1 = t1.filter(x=>x!==id); t2.push(id); }
-        else if (t2.includes(id)) { t2 = t2.filter(x=>x!==id); }
-        else { t1.push(id); }
-        render();
-    }
-
-    function setWin(n) { win = n; render(); }
-
-    async function submit() {
-        if (!win || !t1.length || !t2.length) return alert("請分配隊伍並選出贏家");
-        const b = Number(document.getElementById('v-base').value);
-        const winners = win === 1 ? t1 : t2;
-        const losers = win === 1 ? t2 : t1;
-
-        // 更新贏家
-        for (let id of winners) {
-            const p = players.find(x=>x.id===id);
-            await _db.from('players').update({ money: p.money + b }).eq('id', id);
-        }
-        // 更新輸家
-        const loss = Math.floor((b * winners.length) / losers.length);
-        for (let id of losers) {
-            const p = players.find(x=>x.id===id);
-            await _db.from('players').update({ money: p.money - loss }).eq('id', id);
-        }
-
-        alert("計分成功！");
-        t1 = []; t2 = []; win = 0;
-        load();
-    }
-
-    window.onload = load;
+    // 啟動
+    addLog("腳本已啟動，等待 500ms 後執行...");
+    setTimeout(fetchData, 500);
 </script>
 </body>
 </html>
