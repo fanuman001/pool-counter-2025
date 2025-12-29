@@ -3,82 +3,95 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>ELITE v33.0 - 戰隊精算版</title>
+    <title>ELITE v34.0 - 戰略精算系統</title>
     <style>
         :root { --blue: #00d2ff; --red: #ff3e3e; --green: #00ff88; --gold: #ffd700; --bg: #05070a; --card: #12151c; --gray: #8a96ab; }
-        body { font-family: sans-serif; background: var(--bg); color: #fff; margin: 0; padding: 10px; line-height: 1.4; }
+        body { font-family: -apple-system, sans-serif; background: var(--bg); color: #fff; margin: 0; padding: 10px; }
         .card { background: var(--card); padding: 15px; border-radius: 20px; margin-bottom: 12px; border: 1px solid #2d3748; position: relative; }
         
-        /* 隊伍標籤與成員 */
-        .team-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px; }
-        .team-mems { display: flex; gap: 5px; margin-bottom: 15px; flex-wrap: wrap; }
-        .mem-tag { background: rgba(255,255,255,0.1); padding: 4px 10px; border-radius: 8px; font-size: 12px; border: 1px solid #333; }
+        /* 實時預算動畫標籤 */
+        .score-pop { position: absolute; top: -12px; right: -5px; padding: 2px 8px; border-radius: 10px; font-size: 11px; font-weight: 900; z-index: 10; transition: 0.3s; }
+        .pop-win { background: var(--green); color: #000; box-shadow: 0 0 8px var(--green); }
+        .pop-loss { background: var(--red); color: #fff; box-shadow: 0 0 8px var(--red); }
 
-        .score-pop { position: absolute; top: -10px; right: -5px; padding: 3px 8px; border-radius: 20px; font-size: 11px; font-weight: 900; z-index: 10; border: 1px solid rgba(255,255,255,0.2); }
-        .pop-win { background: var(--green); color: #000; box-shadow: 0 0 10px var(--green); }
-        .pop-loss { background: var(--red); color: #fff; }
+        /* 戰隊成員排列 */
+        .team-mems { display: flex; gap: 6px; margin: 10px 0; flex-wrap: wrap; min-height: 20px; }
+        .mem-tag { background: rgba(255,255,255,0.05); padding: 4px 12px; border-radius: 10px; font-size: 12px; border: 1px solid rgba(255,255,255,0.1); }
 
-        .p-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(90px, 1fr)); gap: 8px; }
+        .p-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(85px, 1fr)); gap: 8px; }
         .p-btn { padding: 12px 5px; background: #1a1f26; border: 2px solid #333; border-radius: 12px; text-align: center; cursor: pointer; position: relative; font-size: 13px; }
         .t-1 { border-color: var(--blue) !important; color: var(--blue); }
         .t-2 { border-color: var(--red) !important; color: var(--red); }
         .t-3 { border-color: #a855f7 !important; color: #a855f7; }
         
-        .egg-group { display: flex; gap: 5px; margin-top: 10px; }
-        .egg-ball { flex: 1; height: 35px; border-radius: 10px; border: 1px solid #444; display: flex; align-items: center; justify-content: center; font-size: 11px; cursor: pointer; background: #000; }
-        .egg-ball.active { background: var(--gold); color: #000; font-weight: bold; }
+        .egg-group { display: flex; gap: 5px; margin-top: 12px; }
+        .egg-ball { flex: 1; height: 36px; border-radius: 10px; border: 1px solid #444; display: flex; align-items: center; justify-content: center; font-size: 11px; cursor: pointer; background: #000; color: #666; }
+        .egg-ball.active { background: var(--gold); color: #000; font-weight: bold; border-color: #fff; }
 
         .tabs { display: flex; gap: 8px; margin-bottom: 15px; background: #1a202c; padding: 5px; border-radius: 15px; }
         .tab { flex: 1; padding: 10px; text-align: center; border-radius: 10px; font-size: 13px; color: var(--gray); cursor: pointer; }
         .tab.active { background: #2d3748; color: var(--gold); font-weight: bold; }
 
-        .win-btn { width: 100%; padding: 12px; border-radius: 10px; margin-top: 10px; border: 2px dashed #444; background: none; color: #555; font-weight: bold; cursor: pointer; }
+        .win-btn { width: 100%; padding: 12px; border-radius: 12px; margin-top: 10px; border: 2px dashed #444; background: none; color: #555; font-weight: bold; cursor: pointer; }
         .win-btn.active { border: 2px solid var(--green); color: var(--green); background: rgba(0,255,136,0.1); }
         .hidden { display: none; }
+        
+        /* 歷史紀錄包裹 */
+        .history-pack { border-left: 3px solid var(--gold); padding-left: 10px; margin-bottom: 15px; }
+        .sub-order { background: #1a1f26; padding: 8px; margin: 4px 0; border-radius: 8px; font-size: 11px; display: flex; justify-content: space-between; }
     </style>
 </head>
 <body>
 
 <div class="tabs">
     <div class="tab active" onclick="showTab('game')">即時戰場</div>
-    <div class="tab" onclick="showTab('wallet')">錢包</div>
-    <div class="tab" onclick="showTab('history')">歷史</div>
+    <div class="tab" onclick="showTab('wallet')">錢包/成員</div>
+    <div class="tab" onclick="showTab('history')">歷史回溯</div>
 </div>
 
 <div id="tab-game">
     <div class="card">
         <div style="display:flex; justify-content:space-between; margin-bottom:10px;">
-            <b style="color:var(--blue); font-size:14px;">🎱 點擊選隊</b>
-            <button onclick="doShuffle()" style="background:var(--gold); border:none; padding:5px 12px; border-radius:8px; font-weight:bold; font-size:12px;">🎰 隨機</button>
+            <b style="color:var(--blue);">🎮 分隊與預算</b>
+            <button onclick="doShuffle()" style="background:var(--gold); border:none; padding:5px 12px; border-radius:8px; font-weight:bold; font-size:12px;">🎰 隨機分隊</button>
         </div>
         <div id="p-grid" class="p-grid"></div>
     </div>
 
     <div id="team-list"></div>
     
-    <div style="display:flex; gap:10px;">
+    <div style="display:flex; gap:10px; margin-bottom:15px;">
         <button onclick="addTeam()" style="flex:1; padding:15px; background:#2d3748; color:#fff; border:none; border-radius:12px; font-weight:bold;">+ 隊伍</button>
-        <button onclick="sendOrder()" style="flex:2; padding:15px; background:var(--green); color:#000; border:none; border-radius:12px; font-weight:900; font-size:18px;">🚀 送單</button>
+        <button onclick="sendOrder()" style="flex:2; padding:15px; background:var(--green); color:#000; border:none; border-radius:12px; font-weight:900; font-size:18px;">🚀 送單計分</button>
     </div>
 
-    <div class="card" onclick="document.getElementById('rules').classList.toggle('hidden')" style="opacity:0.5; margin-top:15px;">
-        <small>⚙️ 規則設定 (點擊)</small>
+    <div class="card" onclick="document.getElementById('rules').classList.toggle('hidden')" style="opacity:0.4;">
+        <small>⚙️ 規則設定</small>
         <div id="rules" class="hidden" style="margin-top:10px; font-size:11px;">
-            底: <input id="v-base" type="number" value="75" style="width:40px">
-            普: <input id="v-ball" type="number" value="25" style="width:40px">
-            媽: <input id="v-egg" type="number" value="50" style="width:40px"><br>
-            媽倍數: 2(<input id="m2" value="3" style="width:20px">) 3(<input id="m3" value="4" style="width:20px">) 4(<input id="m4" value="6" style="width:20px">)
+            底: <input id="v-base" type="number" value="75" oninput="render()">
+            普: <input id="v-ball" type="number" value="25" oninput="render()">
+            媽: <input id="v-egg" type="number" value="50" oninput="render()"><br>
+            媽倍數: 2(<input id="m2" value="3" style="width:25px">) 3(<input id="m3" value="4" style="width:25px">) 4(<input id="m4" value="6" style="width:25px">)
         </div>
     </div>
 </div>
 
 <div id="tab-wallet" class="hidden">
-    <div class="card" id="wallet-online"></div>
-    <div id="wallet-offline" style="display:grid; grid-template-columns:1fr 1fr; gap:8px;"></div>
-    <button onclick="settleFinal()" style="width:100%; padding:15px; background:var(--gold); border:none; border-radius:12px; margin-top:20px; font-weight:bold;">💰 一鍵結單歸零</button>
+    <div class="card">
+        <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:15px;">
+            <b>💎 錢包餘額</b>
+            <button onclick="oneClickOff()" style="color:var(--red); border:1px solid var(--red); background:none; padding:4px 10px; border-radius:8px; font-size:11px;">一鍵全員下線</button>
+        </div>
+        <div id="wallet-online"></div>
+        <div style="margin-top:20px; color:var(--gray); font-size:12px; border-top:1px solid #333; padding-top:10px;">💤 點擊上線參與</div>
+        <div id="wallet-offline" style="display:grid; grid-template-columns:1fr 1fr; gap:8px; margin-top:10px;"></div>
+        <button onclick="settleFinal()" style="width:100%; padding:18px; background:var(--gold); border:none; border-radius:15px; margin-top:25px; font-weight:bold; color:#000;">💰 一鍵結單歸零</button>
+    </div>
 </div>
 
-<div id="tab-history" class="hidden"><div id="order-history"></div></div>
+<div id="tab-history" class="hidden">
+    <div id="order-history"></div>
+</div>
 
 <script>
 const API_URL = 'https://nzuxyiefpenwuqudajdw.supabase.co/rest/v1';
@@ -107,9 +120,7 @@ function calculate() {
     const actives = players.filter(p => playerTeams[p.id] > 0);
     actives.forEach(p => scores[p.id] = 0);
 
-    if (!actives.length) return { scores };
-
-    // 1. 贏家底金 (人頭稅：輸家每人出一份)
+    // 1. 觸底球獎金
     if (winId) {
         const winMems = actives.filter(p => playerTeams[p.id] === winId);
         const lossMems = actives.filter(p => playerTeams[p.id] !== winId);
@@ -120,41 +131,38 @@ function calculate() {
         }
     }
 
-    // 2. 媽球獎金 (進球隊拿 輸家每人x倍數)
+    // 2. 媽球獎金
     teams.forEach(t => {
         if (t.e > 0) {
             const tMems = actives.filter(p => playerTeams[p.id] === t.id);
             const others = actives.filter(p => playerTeams[p.id] !== t.id);
             if (tMems.length && others.length) {
-                const bonusPerHead = eggU * m[t.e];
+                const bonusPerHead = eggU * (m[t.e] || 0);
                 const totalEggPot = bonusPerHead * others.length;
                 others.forEach(p => scores[p.id] -= bonusPerHead);
                 tMems.forEach(p => scores[p.id] += (totalEggPot / tMems.length));
             }
         }
-        
-        // 3. 定向普通球 (打進 B 隊，B 隊每人出一份 25)
+        // 3. 定向普通球
         for (let targetId in t.targetK) {
             const count = t.targetK[targetId];
             if (count <= 0) continue;
             const fromMems = actives.filter(p => playerTeams[p.id] == targetId);
             const toMems = actives.filter(p => playerTeams[p.id] == t.id);
             if (fromMems.length && toMems.length) {
-                const headCount = fromMems.length;
-                const totalBallMoney = count * ball * headCount; 
+                const totalBallMoney = count * ball * fromMems.length; 
                 fromMems.forEach(p => scores[p.id] -= (count * ball));
                 toMems.forEach(p => scores[p.id] += (totalBallMoney / toMems.length));
             }
         }
     });
-
     return { scores };
 }
 
 function render() {
     const { scores } = calculate();
 
-    // 渲染名單
+    // 渲染成員與預算
     document.getElementById('p-grid').innerHTML = players.filter(p => !p.name.startsWith('OFF_')).map(p => {
         const tid = playerTeams[p.id] || 0;
         const s = Math.round(scores[p.id] || 0);
@@ -171,50 +179,58 @@ function render() {
         const borderColor = t.id==1?'var(--blue)':t.id==2?'var(--red)':'#a855f7';
         
         return `<div class="card" style="border-left:5px solid ${borderColor}">
-            <div class="team-header">
-                <b>隊伍 ${t.id}</b>
-                <b style="color:${tScore>=0?'var(--green)':'var(--red)'}">${Math.round(tScore)}</b>
+            <div style="display:flex; justify-content:space-between;">
+                <b>隊伍 ${t.id} <small style="color:var(--gray); opacity:0.5;">(${mems.length}人)</small></b>
+                <b style="color:${tScore>=0?'var(--green)':'var(--red)'}; font-size:18px;">${Math.round(tScore)}</b>
             </div>
             <div class="team-mems">
-                ${mems.length ? mems.map(m => `<span class="mem-tag" style="color:${borderColor}">${m.name}</span>`).join('') : '<small style="color:#444">未選員</small>'}
+                ${mems.length ? mems.map(m => `<span class="mem-tag" style="color:${borderColor}">${m.name}</span>`).join('') : '<small style="color:#444">未選入成員</small>'}
             </div>
-            
             <div style="display:flex; flex-wrap:wrap; gap:5px;">
                 ${teams.filter(o=>o.id !== t.id).map(o => `
-                    <div style="background:#000; padding:5px 10px; border-radius:8px; display:flex; align-items:center; border:1px solid #333; font-size:11px;">
-                        <span>進隊${o.id}:</span>
-                        <button onclick="adjK(${t.id},${o.id},-1)" style="color:#fff; border:none; background:none; padding:0 8px;">-</button>
+                    <div style="background:#000; padding:6px 12px; border-radius:10px; display:flex; align-items:center; border:1px solid #333;">
+                        <span style="font-size:10px; color:var(--gray);">進隊${o.id}:</span>
+                        <button onclick="adjK(${t.id},${o.id},-1)" style="color:#fff; border:none; background:none; padding:0 10px; font-size:16px;">-</button>
                         <b style="color:var(--gold);">${t.targetK[o.id] || 0}</b>
-                        <button onclick="adjK(${t.id},${o.id},1)" style="color:#fff; border:none; background:none; padding:0 8px;">+</button>
+                        <button onclick="adjK(${t.id},${o.id},1)" style="color:#fff; border:none; background:none; padding:0 10px; font-size:16px;">+</button>
                     </div>`).join('')}
             </div>
             <div class="egg-group">
-                ${[1,2,3,4].map(i => `<div class="egg-ball ${t.e==i?'active':''}" onclick="adjE(${t.id},i)">${i}媽</div>`).join('')}
+                ${[1,2,3,4].map(i => `<div class="egg-ball ${t.e==i?'active':''}" onclick="adjE(${t.id},${i})">${i}媽</div>`).join('')}
             </div>
-            <button class="win-btn ${winId==t.id?'active':''}" onclick="setWin(${t.id})">${winId==t.id?'🏆 冠軍':'標記冠軍'}</button>
+            <button class="win-btn ${winId==t.id?'active':''}" onclick="setWin(${t.id})">${winId==t.id?'🏆 獲勝隊伍':'標記贏家'}</button>
         </div>`;
     }).join('');
 
+    // 錢包列表
     const online = players.filter(p => !p.name.startsWith('OFF_')).sort((a,b)=>b.money-a.money);
     document.getElementById('wallet-online').innerHTML = online.map(p => `
-        <div style="display:flex; justify-content:space-between; padding:10px 0; border-bottom:1px solid #2d3748; align-items:center;">
-            <b>${p.name}</b>
+        <div style="display:flex; justify-content:space-between; padding:12px 0; border-bottom:1px solid #2d3748; align-items:center;">
+            <div onclick="showPlayerAnalysis('${p.name}')"><b>${p.name}</b><br><small style="color:var(--gray); font-size:10px;">點擊分析分析數據</small></div>
             <div style="text-align:right">
-                <b style="color:${p.money>=0?'var(--green)':'var(--red)'}">${p.money}</b><br>
+                <b style="font-size:18px; color:${p.money>=0?'var(--green)':'var(--red)'}">${p.money}</b><br>
                 <button onclick="toggleOnOff(${p.id},'${p.name}')" style="color:var(--gray); font-size:10px; background:none; border:none;">下線</button>
-                <button onclick="manualMoney(${p.id},'${p.name}',${p.money})" style="color:var(--gold); font-size:10px; margin-left:8px; background:none; border:none;">[改]</button>
             </div>
         </div>`).join('');
 
     document.getElementById('wallet-offline').innerHTML = players.filter(p => p.name.startsWith('OFF_')).map(p => `
-        <button onclick="toggleOnOff(${p.id},'${p.name}')" style="background:#222; border:1px solid #333; color:#aaa; padding:8px; border-radius:8px; font-size:12px;">+ ${p.name.replace('OFF_','')}</button>
+        <button onclick="toggleOnOff(${p.id},'${p.name}')" style="background:#222; border:1px solid #333; color:#aaa; padding:10px; border-radius:10px; font-size:12px;">+ ${p.name.replace('OFF_','')}</button>
     `).join('');
 
     renderHistory();
 }
 
-function adjK(tid, targetId, v) { const t = teams.find(x => x.id === tid); t.targetK[targetId] = Math.max(0, (t.targetK[targetId] || 0) + v); render(); }
-function adjE(tid, i) { const t = teams.find(x => x.id === tid); t.e = (t.e === i ? 0 : i); render(); }
+// --- 控制邏輯 ---
+function adjE(tid, i) { 
+    const t = teams.find(x => x.id === tid); 
+    t.e = (t.e === i ? 0 : i); 
+    render(); 
+}
+function adjK(tid, targetId, v) { 
+    const t = teams.find(x => x.id === tid); 
+    t.targetK[targetId] = Math.max(0, (t.targetK[targetId] || 0) + v); 
+    render(); 
+}
 function setWin(id) { winId = (winId === id ? 0 : id); render(); }
 function addTeam() { teams.push({id: teams.length + 1, e: 0, targetK: {}}); render(); }
 function togglePT(pid) { playerTeams[pid] = ((playerTeams[pid] || 0) + 1) % (teams.length + 1); render(); }
@@ -236,7 +252,7 @@ async function sendOrder() {
 }
 
 async function delAndRefund(id) {
-    if (prompt("8888") !== '8888') return;
+    if (prompt("密碼 8888") !== '8888') return;
     const m = matches.find(x => x.id === id);
     const items = m.description.match(/([^\(\n, ]+)\((-?\d+)\)/g);
     if (items) {
@@ -250,25 +266,80 @@ async function delAndRefund(id) {
     init();
 }
 
+// 結單歸零：將當前的單局訂單封存
+async function settleFinal() {
+    if (prompt("結單歸零 8888") !== '8888') return;
+    let desc = `💰 結單歸零包：\n`;
+    players.filter(p => p.money !== 0).forEach(p => desc += `${p.name}: ${p.money} | `);
+    await fetch(`${API_URL}/history`, { method: 'POST', headers: HEADERS, body: JSON.stringify({ description: desc }) });
+    for (let p of players) await patch(p.id, { money: 0 });
+    init();
+}
+
 function renderHistory() {
-    const s = matches.filter(m => m.description.includes('💰'));
-    document.getElementById('order-history').innerHTML = s.map(o => {
-        const sub = matches.filter(m => !m.description.includes('💰') && new Date(m.created_at) < new Date(o.created_at)).slice(0, 8);
-        return `<div class="card" style="border: 1px solid var(--gold);">
-            <div style="display:flex; justify-content:space-between; font-size:10px; color:var(--gold);"><b>結單 #${o.id}</b> <span>${o.created_at.slice(5,16)}</span></div>
-            ${sub.map(sm => `<div style="background:#1a1f26; padding:8px; margin-top:5px; border-radius:8px; font-size:11px; display:flex; justify-content:space-between;">
-                <span>${sm.description.split('\n')[0]}</span>
-                <button onclick="delAndRefund(${sm.id})" style="color:var(--red); border:none; background:none; font-size:9px;">[刪除]</button>
-            </div>`).join('')}
+    // 分類：結單包 與 普通戰局單
+    const settles = matches.filter(m => m.description.includes('💰'));
+    const normalOrders = matches.filter(m => !m.description.includes('💰'));
+
+    // 結單前未封存的單子
+    let html = `<b style="color:var(--blue); font-size:12px;">🕒 結單前戰鬥單 (可刪除回補)</b><br><br>`;
+    
+    // 找出所有在最新一次結單之後的單子
+    const lastSettleTime = settles.length ? new Date(settles[0].created_at) : new Date(0);
+    const pendingOrders = normalOrders.filter(o => new Date(o.created_at) > lastSettleTime);
+
+    html += pendingOrders.map(o => `
+        <div class="sub-order">
+            <span>${o.description.split('\n')[0]} - ${o.created_at.slice(11,16)}</span>
+            <button onclick="delAndRefund(${o.id})" style="color:var(--red); border:none; background:none; font-size:10px;">[刪除回補]</button>
+        </div>
+    `).join('');
+
+    html += `<br><br><b style="color:var(--gold); font-size:12px;">📦 已封存歷史結單</b><br><br>`;
+    
+    html += settles.map(s => {
+        // 找出屬於這個結單包的單子 (比這張結單早，但比上張結單晚)
+        const nextSettle = settles.find(x => new Date(x.created_at) < new Date(s.created_at));
+        const startTime = nextSettle ? new Date(nextSettle.created_at) : new Date(0);
+        const packedOrders = normalOrders.filter(o => new Date(o.created_at) <= new Date(s.created_at) && new Date(o.created_at) > startTime);
+
+        return `<div class="card" style="border:1px solid var(--gold); background:rgba(255,215,0,0.02);">
+            <div style="font-size:11px; color:var(--gold); display:flex; justify-content:space-between;">
+                <b>結單歸零 #${s.id}</b> <span>${s.created_at.slice(5,10)}</span>
+            </div>
+            <div style="font-size:12px; margin-top:8px; color:var(--green); font-weight:bold;">${s.description.split('\n')[1] || ""}</div>
+            <details style="margin-top:10px;">
+                <summary style="font-size:10px; color:var(--gray);">展開查看內含 ${packedOrders.length} 筆明細</summary>
+                ${packedOrders.map(po => `<div style="font-size:9px; color:#666; padding:4px 0; border-bottom:1px solid #222;">${po.description}</div>`).join('')}
+            </details>
         </div>`;
     }).join('');
+
+    document.getElementById('order-history').innerHTML = html;
+}
+
+// 基於「結單歷史」的數據分析
+function showPlayerAnalysis(name) {
+    const playerMatches = matches.filter(m => m.description.includes(name));
+    let winCount = 0, totalEarn = 0, totalLoss = 0;
+    
+    playerMatches.forEach(m => {
+        const match = m.description.match(new RegExp(name + "\\((-?\\d+)\\)"));
+        if (match) {
+            const val = parseInt(match[1]);
+            if (val > 0) { winCount++; totalEarn += val; }
+            else { totalLoss += Math.abs(val); }
+        }
+    });
+
+    alert(`${name} 戰場分析：\n參與場次：${playerMatches.length}\n勝場：${winCount}\n累積贏取：${totalEarn}\n累積輸掉：${totalLoss}\n淨損益：${totalEarn - totalLoss}`);
 }
 
 function showTab(t) { ['game','wallet','history'].forEach(x => document.getElementById('tab-'+x).classList.toggle('hidden', x!==t)); document.querySelectorAll('.tab').forEach(el => el.classList.remove('active')); event.currentTarget.classList.add('active'); }
 async function patch(id, d) { return fetch(`${API_URL}/players?id=eq.${id}`, { method: 'PATCH', headers: HEADERS, body: JSON.stringify(d) }); }
 async function toggleOnOff(id, n) { await patch(id, { name: n.startsWith('OFF_') ? n.replace('OFF_','') : 'OFF_'+n }); init(); }
-async function settleFinal() { if (prompt("8888") !== '8888') return; for (let p of players) await patch(p.id, { money: 0 }); init(); }
-function doShuffle() { /* 同前版本邏輯 */ const on = players.filter(p=>!p.name.startsWith('OFF_')); playerTeams={}; on.sort(()=>Math.random()-0.5).forEach((p,i)=>playerTeams[p.id]=(i%teams.length)+1); render(); }
+async function oneClickOff() { if(!confirm("確定全員下線？"))return; for (let p of players) if(!p.name.startsWith('OFF_')) await patch(p.id, {name:'OFF_'+p.name}); init(); }
+function doShuffle() { const on = players.filter(p=>!p.name.startsWith('OFF_')); playerTeams={}; on.sort(()=>Math.random()-0.5).forEach((p,i)=>playerTeams[p.id]=(i%teams.length)+1); render(); }
 
 init();
 </script>
