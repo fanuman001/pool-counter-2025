@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>🎱 ELITE PRO v13</title>
+    <title>🎱 ELITE PRO v13.5</title>
     <style>
         :root { --blue: #0084ff; --red: #ff3333; --green: #00ff88; --gold: #ffd700; --bg: #050505; }
         body { font-family: sans-serif; background: var(--bg); color: #eee; margin: 0; padding: 10px; }
@@ -13,16 +13,20 @@
         .active-t1 { border-color: var(--blue) !important; color: var(--blue); }
         .active-t2 { border-color: var(--red) !important; color: var(--red); }
         .team-box { background: #12141a; padding: 15px; border-radius: 8px; margin-bottom: 10px; border: 1px solid #222; }
-        #loading { position: fixed; inset: 0; background: var(--bg); z-index: 1000; display: flex; align-items: center; justify-content: center; }
+        #loading { position: fixed; inset: 0; background: var(--bg); z-index: 1000; display: flex; align-items: center; justify-content: center; flex-direction: column; }
         .win-btn { flex: 1; padding: 10px; border: none; border-radius: 5px; background: #333; color: #fff; font-weight: bold; }
         .win-active-1 { background: var(--blue) !important; }
         .win-active-2 { background: var(--red) !important; }
         input[type="number"] { background: #000; color: var(--gold); border: 1px solid #444; width: 45px; text-align: center; border-radius: 4px; padding: 5px; }
+        #log { color: #555; font-size: 10px; margin-top: 10px; max-width: 80%; text-align: center; }
     </style>
 </head>
 <body>
 
-<div id="loading"><h2>📡 資料同步中...</h2></div>
+<div id="loading">
+    <h2 id="load-status">📡 資料同步中...</h2>
+    <div id="log">系統啟動中...</div>
+</div>
 
 <div id="app" style="display:none;">
     <div class="card">
@@ -38,7 +42,6 @@
         <div style="display:flex; justify-content:space-between; margin:15px 0;">
             <span>底 <input id="v-base" type="number" value="75"></span>
             <span>球 <input id="v-ball" type="number" value="25"></span>
-            <span>蛋 <input id="v-egg" type="number" value="50"></span>
         </div>
         
         <div class="team-box" style="border-left: 4px solid var(--blue);">
@@ -71,20 +74,41 @@
 
     let players = [], t1 = [], t2 = [], k1 = 0, k2 = 0, winT = 0;
 
+    function setLog(msg) { document.getElementById('log').innerText = msg; }
+
     async function apiFetch() {
-        const res = await fetch(`${API_URL}?select=*`, { headers: HEADERS });
-        players = await res.json();
-        document.getElementById('loading').style.display = 'none';
-        document.getElementById('app').style.display = 'block';
-        render();
+        setLog("正在發送請求...");
+        try {
+            const res = await fetch(`${API_URL}?select=*`, { headers: HEADERS });
+            setLog("伺服器已回應 (" + res.status + ")");
+            
+            const rawData = await res.json();
+            setLog("解析完成，資料筆數: " + rawData.length);
+
+            // 確保 money 是數字，處理 null 情況
+            players = rawData.map(p => ({
+                ...p,
+                money: Number(p.money || 0)
+            }));
+
+            document.getElementById('loading').style.display = 'none';
+            document.getElementById('app').style.display = 'block';
+            render();
+        } catch (e) {
+            setLog("❌ 發生錯誤: " + e.message);
+            document.getElementById('load-status').innerText = "連線失敗";
+            document.getElementById('load-status').style.color = "red";
+        }
     }
 
     async function apiUpdate(id, newData) {
-        await fetch(`${API_URL}?id=eq.${id}`, {
-            method: 'PATCH',
-            headers: HEADERS,
-            body: JSON.stringify(newData)
-        });
+        try {
+            await fetch(`${API_URL}?id=eq.${id}`, {
+                method: 'PATCH',
+                headers: HEADERS,
+                body: JSON.stringify(newData)
+            });
+        } catch (e) { console.error("Update failed", e); }
     }
 
     function render() {
@@ -102,8 +126,8 @@
         document.getElementById('w-list').innerHTML = [...players].sort((a,b)=>b.money-a.money).map(p => `
             <div style="display:flex; justify-content:space-between; padding:10px 0; border-bottom:1px solid #222; ${p.name.startsWith('OFF_')?'opacity:0.3':''}">
                 <span>${p.name.replace('OFF_','')}</span>
-                <b style="color:${p.money>=0?var(--green):var(--red)}">${p.money}</b>
-            </div>`).join('').replace(/var\(--green\)/g, '#0f8').replace(/var\(--red\)/g, '#f33');
+                <b style="color:${p.money>=0?'#0f8':'#f33'}">${p.money}</b>
+            </div>`).join('');
     }
 
     function toggleP(id) {
@@ -131,6 +155,7 @@
         const score = base + (winT === 1 ? (k1 - k2) : (k2 - k1)) * ball;
 
         document.getElementById('loading').style.display = 'flex';
+        setLog("正在計算並更新分數...");
         
         for (let id of winIds) {
             const p = players.find(x => x.id === id);
@@ -143,9 +168,9 @@
             await apiUpdate(id, { money: p.money - perLoss });
         }
 
-        alert("計分成功！");
         t1=[]; t2=[]; k1=0; k2=0; winT=0;
-        apiFetch();
+        await apiFetch();
+        alert("計分成功！");
     }
 
     window.onload = apiFetch;
