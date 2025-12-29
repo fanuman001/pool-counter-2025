@@ -1,37 +1,174 @@
 <!DOCTYPE html>
-<html>
+<html lang="zh-TW">
 <head>
     <meta charset="UTF-8">
-    <title>🎱 診斷版 v8.4</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>🎱 ELITE PRO v9.0</title>
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <style>
+        :root { --blue: #0084ff; --red: #ff3333; --green: #00ff88; --gold: #ffd700; --bg: #050505; }
+        body { font-family: sans-serif; background: var(--bg); color: #eee; margin: 0; padding: 10px; }
+        .card { background: #1a1c23; padding: 15px; border-radius: 12px; margin-bottom: 12px; border: 1px solid #333; }
+        .p-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(90px, 1fr)); gap: 10px; }
+        .p-btn { padding: 12px 5px; background: #000; border: 2px solid #333; border-radius: 8px; text-align: center; cursor: pointer; }
+        .active-t1 { border-color: var(--blue) !important; }
+        .active-t2 { border-color: var(--red) !important; }
+        .team-box { border-top: 4px solid #444; background: #12141a; padding: 15px; border-radius: 8px; margin-bottom: 10px; }
+        #mask { position: fixed; inset: 0; background: var(--bg); z-index: 1000; display: flex; align-items: center; justify-content: center; flex-direction: column; }
+        input[type="number"] { background: #000; color: var(--gold); border: 1px solid #444; width: 45px; text-align: center; border-radius: 4px; }
+    </style>
 </head>
-<body style="background:#000; color:#fff; font-family:sans-serif; text-align:center; padding:20px;">
-    <h2 id="msg">正在連接資料庫...</h2>
-    <div id="list" style="background:#111; padding:10px; border-radius:10px; min-height:100px; text-align:left;"></div>
-    <button onclick="location.reload()" style="margin-top:20px; padding:10px;">🔄 重新整理</button>
+<body>
+
+<div id="mask">
+    <h2 style="color:var(--gold)">🎱 球員名單載入中</h2>
+    <div id="check-in-list" style="width:90%; max-width:400px; height:300px; overflow-y:auto; background:#000; border:1px solid #333; margin:20px 0;"></div>
+    <button onclick="confirmStart()" style="width:90%; max-width:400px; padding:15px; background:var(--green); border:none; font-weight:bold; border-radius:10px;">✅ 開始對局</button>
+    <button onclick="addUser()" style="margin-top:10px; color:#666; background:none; border:none;">➕ 手動新增球員</button>
+</div>
+
+<div id="app" style="display:none;">
+    <div class="card">
+        <div style="display:flex; justify-content:space-between; margin-bottom:10px;">
+            <b>👥 在線成員</b>
+            <button onclick="autoTeam()" style="color:var(--blue); background:none; border:none; font-weight:bold;">🎰 隨機分隊</button>
+        </div>
+        <div id="player-grid" class="p-grid"></div>
+    </div>
+
+    <div class="card">
+        <b>⚙️ 局設定</b>
+        <div style="display:flex; justify-content:space-between; margin:10px 0;">
+            <span>底盤 <input id="v-base" type="number" value="75"></span>
+            <span>普球 <input id="v-ball" type="number" value="25"></span>
+            <span>彩蛋 <input id="v-egg" type="number" value="50"></span>
+        </div>
+        <div id="team-area"></div>
+        <button onclick="submitScore()" style="width:100%; padding:15px; background:var(--green); border:none; font-weight:bold; border-radius:10px; font-size:16px;">🚀 送單計分</button>
+    </div>
+
+    <div class="card">
+        <b>💎 錢包排名</b>
+        <div id="wallet-list" style="margin-top:10px;"></div>
+        <button onclick="settleAll()" style="width:100%; margin-top:10px; padding:8px; background:var(--gold); border:none; border-radius:5px;">💰 結單歸零</button>
+    </div>
+</div>
 
 <script>
     const URL = 'https://nzuxyiefpenwuqudajdw.supabase.co';
     const KEY = 'sb_publishable_7y2n8zIopxlKEhcsJ05D2A_U89IFgae';
     const _db = supabase.createClient(URL, KEY);
 
-    async function start() {
-        try {
-            const { data, error } = await _db.from('players').select('*');
-            if (error) throw error;
-            
-            document.getElementById('msg').innerText = "✅ 連線成功！成員名單：";
-            document.getElementById('list').innerHTML = data.map(p => 
-                `<div style="padding:10px; border-bottom:1px solid #333;">
-                    ${p.name} - 餘額: ${p.money !== undefined ? p.money : '無money欄位'}
-                </div>`
-            ).join('');
-        } catch (e) {
-            document.getElementById('msg').innerText = "❌ 發生錯誤";
-            document.getElementById('list').innerHTML = `<pre style="color:red">${JSON.stringify(e, null, 2)}</pre>`;
+    let players = [], t1 = [], t2 = [], winT = 0;
+
+    async function fetchData() {
+        const { data, error } = await _db.from('players').select('*');
+        if (data) {
+            players = data;
+            renderCheckIn();
+            render();
+        } else {
+            document.getElementById('check-in-list').innerHTML = `<p style="color:red; text-align:center; padding-top:100px;">讀取失敗，請確認 RLS 政策</p>`;
         }
     }
-    start();
+
+    function renderCheckIn() {
+        document.getElementById('check-in-list').innerHTML = players.map(p => `
+            <div style="padding:15px; border-bottom:1px solid #222;">
+                <input type="checkbox" id="cb-${p.id}" ${p.name.indexOf('OFF_') === -1 ? 'checked' : ''}>
+                <label for="cb-${p.id}" style="font-size:18px; margin-left:10px;">${p.name.replace('OFF_','')}</label>
+            </div>`).join('');
+    }
+
+    async function confirmStart() {
+        for (let p of players) {
+            const isChecked = document.getElementById(`cb-${p.id}`).checked;
+            let newName = isChecked ? p.name.replace('OFF_','') : (p.name.startsWith('OFF_') ? p.name : 'OFF_' + p.name);
+            if (newName !== p.name) await _db.from('players').update({ name: newName }).eq('id', p.id);
+        }
+        document.getElementById('mask').style.display = 'none';
+        document.getElementById('app').style.display = 'block';
+        fetchData();
+    }
+
+    function render() {
+        const active = players.filter(p => !p.name.startsWith('OFF_'));
+        
+        // 渲染球員
+        document.getElementById('player-grid').innerHTML = active.map(p => {
+            let cls = t1.includes(p.id) ? 'active-t1' : (t2.includes(p.id) ? 'active-t2' : '');
+            return `<div class="p-btn ${cls}" onclick="toggleP(${p.id})">${p.name}</div>`;
+        }).join('');
+
+        // 渲染隊伍
+        const teamUI = (ids, num) => `
+            <div class="team-box" style="border-color:${num===1? 'var(--blue)':'var(--red)'}">
+                <button onclick="winT=${num};render()" style="background:${winT===num ? (num===1?'var(--blue)':'var(--red)') : '#333'}; color:#fff; border:none; padding:5px 10px; border-radius:4px;">${winT===num?'🏆 贏家':'標記獲勝'}</button>
+                <div style="font-size:12px; color:#666; margin:10px 0;">成員: ${ids.map(id => players.find(x=>x.id===id).name).join(', ')}</div>
+            </div>`;
+        document.getElementById('team-area').innerHTML = teamUI(t1, 1) + teamUI(t2, 2);
+
+        // 渲染錢包
+        const sorted = [...players].sort((a,b) => b.money - a.money);
+        document.getElementById('wallet-list').innerHTML = sorted.map(p => `
+            <div style="display:flex; justify-content:space-between; padding:8px 0; border-bottom:1px solid #222; ${p.name.startsWith('OFF_')?'opacity:0.3':''}">
+                <span>${p.name.replace('OFF_','')}</span>
+                <b style="color:${p.money>=0?'#0f8':'#f33'}" onclick="manualSet(${p.id},${p.money})">${p.money}</b>
+            </div>`).join('');
+    }
+
+    function toggleP(id) {
+        if(t1.includes(id)) { t1 = t1.filter(x=>x!==id); t2.push(id); }
+        else if(t2.includes(id)) { t2 = t2.filter(x=>x!==id); }
+        else { t1.push(id); }
+        render();
+    }
+
+    async function submitScore() {
+        if (!winT || !t1.length || !t2.length) return alert("請分配隊伍並標記贏家");
+        const b = Number(document.getElementById('v-base').value);
+        const winIds = winT === 1 ? t1 : t2;
+        const loseIds = winT === 1 ? t2 : t1;
+
+        for (let id of winIds) {
+            const p = players.find(x => x.id === id);
+            await _db.from('players').update({ money: p.money + b }).eq('id', id);
+        }
+        const totalLose = b * winIds.length;
+        const perLose = Math.floor(totalLose / loseIds.length);
+        for (let id of loseIds) {
+            const p = players.find(x => x.id === id);
+            await _db.from('players').update({ money: p.money - perLose }).eq('id', id);
+        }
+        t1 = []; t2 = []; winT = 0;
+        fetchData();
+    }
+
+    function autoTeam() {
+        const act = players.filter(p => !p.name.startsWith('OFF_'));
+        t1 = []; t2 = [];
+        act.sort(()=>Math.random()-0.5).forEach((p, i) => i%2===0 ? t1.push(p.id) : t2.push(p.id));
+        render();
+    }
+
+    async function settleAll() {
+        if(prompt("管理密碼:") !== "8888") return;
+        for(let p of players) await _db.from('players').update({ money: 0 }).eq('id', p.id);
+        fetchData();
+    }
+
+    async function addUser() {
+        const n = prompt("名字:");
+        if(n) { await _db.from('players').insert([{ name: 'OFF_' + n, money: 0 }]); fetchData(); }
+    }
+
+    async function manualSet(id, old) {
+        if(prompt("密碼:") !== "8888") return;
+        const v = prompt("修改餘額為:", old);
+        if(v !== null) { await _db.from('players').update({ money: Number(v) }).eq('id', id); fetchData(); }
+    }
+
+    window.onload = fetchData;
 </script>
 </body>
 </html>
