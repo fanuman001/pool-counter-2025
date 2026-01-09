@@ -1,208 +1,203 @@
 <script>
 /* ===============================
-   基本設定
-=============================== */
-const SUPABASE_URL = 'https://nzuxyiefpenwuqudajdw.supabase.co';
-const SUPABASE_KEY = 'sb_publishable_7y2n8zIopxlKEhcsJ05D2A_U89IFgae';
-const _db = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
-const ADMIN_PW = "8888";
+   Supabase 設定
+================================ */
+const SUPABASE_URL = "https://nzuxyiefpenwuqudajdw.supabase.co/rest/v1";
+const SUPABASE_KEY = "sb_publishable_7y2n8zIopxlKEhcsJ05D2A_U89IFgae";
+
+const HEADERS = {
+  apikey: SUPABASE_KEY,
+  Authorization: `Bearer ${SUPABASE_KEY}`,
+  "Content-Type": "application/json"
+};
 
 /* ===============================
-   狀態
-=============================== */
-let players = [];
-let history = [];
-let tempSubmit = null;
+   媽球倍率設定
+================================ */
+const MA_MULTIPLIER = {
+  1: 1,
+  2: 3,
+  3: 4,
+  4: 6,
+  5: 8
+};
 
 /* ===============================
-   分隊
-=============================== */
-let teams = [
-  { id:'t1', name:'藍隊', color:'#0084ff', members:[], kills:0, eggs:[], win:false },
-  { id:'t2', name:'紅隊', color:'#ff3333', members:[], kills:0, eggs:[], win:false }
-];
+   1️⃣ 純計算（核心）
+================================ */
+/**
+ * players: [{id, name, money}]
+ * playerTeams: { playerId: teamId }
+ * winId: number
+ * baseMoney: number
+ * extras: [
+ *   { type:'ma', teamId, count, price },
+ *   { type:'target', fromTeam, toTeam, count, price }
+ * ]
+ */
+function calculateGameResult({
+  players,
+  playerTeams,
+  winId,
+  baseMoney,
+  extras = [],
+  roundId = Date.now()
+}) {
+  /* --- 分隊 --- */
+  const teams = {};
+  players.forEach(p => {
+    const t = playerTeams[p.id];
+    if (!teams[t]) teams[t] = [];
+    teams[t].push(p.id);
+  });
 
-/* ===============================
-   初始化
-=============================== */
-init();
-async function init() {
-  await fetchData();
-}
+  const teamIds = Object.keys(teams);
+  const teamSizes = {};
+  teamIds.forEach(t => teamSizes[t] = teams[t].length);
 
-/* ===============================
-   資料載入
-=============================== */
-async function fetchData() {
-  const { data:p } = await _db.from('players').select('*').order('id');
-  const { data:h } = await _db.from('history').select('*').order('created_at', {ascending:false});
-  players = p || [];
-  history = h || [];
-  render();
-}
+  const maxN = Math.max(...Object.values(teamSizes));
+  const teamBase = baseMoney * maxN;
 
-/* ===============================
-   UI 渲染（最小必要）
-=============================== */
-function render() {
-  document.getElementById('teams-list').innerHTML = teams.map(t=>{
-    const names = t.members.map(id=>players.find(p=>p.id===id)?.name.replace("OFF_","")).join('、');
-    return `<div style="border-left:5px solid ${t.color};padding:8px;margin-bottom:8px">
-      <b>${t.name}</b><br><small>${names||'尚未分隊'}</small>
-      <div>擊球 ${t.kills}</div>
-      <button onclick="adjKills('${t.id}',1)">+</button>
-      <button onclick="adjKills('${t.id}',-1)">-</button>
-      <button onclick="setWinner('${t.id}')">${t.win?'🏆':'勝利'}</button>
-    </div>`;
-  }).join('');
-}
+  /* --- 初始化 --- */
+  const teamDelta = {};
+  const playerDelta = {};
+  teamIds.forEach(t => teamDelta[t] = 0);
+  players.forEach(p => playerDelta[p.id] = 0);
 
-/* ===============================
-   操作
-=============================== */
-function adjKills(id,val){
-  const t=teams.find(x=>x.id===id);
-  t.kills=Math.max(0,t.kills+val);
-  render();
-}
-function setWinner(id){
-  teams.forEach(t=>t.win=false);
-  teams.find(t=>t.id===id).win=true;
-  render();
-}
+  /* --- Base Game --- */
+  teamIds.forEach(t => {
+    if (Number(t) !== winId) {
+      teamDelta[t] -= teamBase;
+      teamDelta[winId] += teamBase;
+    }
+  });
 
-/* ===============================
-   結算
-=============================== */
-async function calculate(){
-  const winners=teams.filter(t=>t.win);
-  if(!winners.length) return alert("請標記勝隊");
+  /* --- Extra：媽球 / 定向球 --- */
+  extras.forEach(e => {
+    const unit = e.price * (MA_MULTIPLIER[e.count] || 1) * maxN;
 
-  let results=[];
-  teams.forEach(t=>{
-    const base=t.win?150:-150;
-    const per=Math.floor(base/t.members.length);
-    t.members.forEach(pid=>{
-      results.push({player_id:pid,profit:per});
+    if (e.type === "ma") {
+      teamIds.forEach(t => {
+        if (Number(t) !== e.teamId) {
+          teamDelta[t] -= unit;
+          teamDelta[e.teamId] += unit;
+        }
+      });
+    }
+
+    if (e.type === "target") {
+      teamDelta[e.fromTeam] += unit;
+      teamDelta[e.toTeam] -= unit;
+    }
+  });
+
+  /* --- 分配到個人 --- */
+  teamIds.forEach(t => {
+    const perPerson = teamDelta[t] / teamSizes[t];
+    teams[t].forEach(pid => {
+      playerDelta[pid] += perPerson;
     });
   });
 
-  tempSubmit={results};
-  await confirmSubmit();
-}
-
-/* ===============================
-   確認送出 + 自動分析
-=============================== */
-async function confirmSubmit(){
-  /* 1️⃣ 更新金額 */
-  for(const r of tempSubmit.results){
-    const p=players.find(x=>x.id===r.player_id);
-    await _db.from('players')
-      .update({money:p.money+r.profit})
-      .eq('id',p.id);
-  }
-
-  /* 2️⃣ 寫入分析 */
-  await runAutoAnalysis(tempSubmit.results);
-
-  /* 3️⃣ 歷史（可刪） */
-  await _db.from('history').insert([{
-    description:'⚔️ 對局完成'
-  }]);
-
-  resetTeams();
-  fetchData();
-}
-
-/* ===============================
-   🔥 自動分析核心
-=============================== */
-async function runAutoAnalysis(results){
-  const teamMap={};
-  teams.forEach(t=>t.members.forEach(p=>teamMap[p]=t));
-
-  /* 個人分析 */
-  for(const r of results){
-    const pid=r.player_id;
-    const profit=r.profit;
-
-    const { data:old } = await _db
-      .from('player_analysis')
-      .select('*')
-      .eq('player_id',pid)
-      .single();
-
-    if(!old){
-      await _db.from('player_analysis').insert([{
-        player_id:pid,
-        games_played:1,
-        presence_score:profit,
-        avg_profit:profit,
-        volatility:0
-      }]);
-    }else{
-      const gp=old.games_played+1;
-      const avg=(old.avg_profit*old.games_played+profit)/gp;
-      const vol=Math.abs(profit-avg);
-      await _db.from('player_analysis').update({
-        games_played:gp,
-        avg_profit:avg,
-        presence_score:avg,
-        volatility:(old.volatility+vol)/2,
-        updated_at:new Date()
-      }).eq('player_id',pid);
-    }
-  }
-
-  /* 雙人分析 */
-  for(const t of teams){
-    for(let i=0;i<t.members.length;i++){
-      for(let j=i+1;j<t.members.length;j++){
-        const a=t.members[i];
-        const b=t.members[j];
-        const pair=[Math.min(a,b),Math.max(a,b)];
-
-        const teamProfit=results
-          .filter(r=>pair.includes(r.player_id))
-          .reduce((s,r)=>s+r.profit,0);
-
-        const { data:old } = await _db
-          .from('pair_analysis')
-          .select('*')
-          .eq('player_a',pair[0])
-          .eq('player_b',pair[1])
-          .single();
-
-        if(!old){
-          await _db.from('pair_analysis').insert([{
-            player_a:pair[0],
-            player_b:pair[1],
-            games_together:1,
-            synergy_score:teamProfit
-          }]);
-        }else{
-          const g=old.games_together+1;
-          const syn=(old.synergy_score*old.games_together+teamProfit)/g;
-          await _db.from('pair_analysis').update({
-            games_together:g,
-            synergy_score:syn,
-            updated_at:new Date()
-          }).eq('player_a',pair[0]).eq('player_b',pair[1]);
-        }
-      }
-    }
-  }
-}
-
-/* ===============================
-   重置
-=============================== */
-function resetTeams(){
-  teams.forEach(t=>{
-    t.kills=0;
-    t.eggs=[];
-    t.win=false;
+  /* --- 最終四捨五入 --- */
+  Object.keys(playerDelta).forEach(pid => {
+    playerDelta[pid] = Math.round(playerDelta[pid]);
   });
+
+  /* --- history 純文字 --- */
+  const teamDesc = teamIds.map(t => {
+    const v = Math.round(teamDelta[t]);
+    return `隊${t}(${v >= 0 ? "+" : ""}${v})`;
+  }).join(" ");
+
+  const description = `局#${roundId} 🏆隊${winId} ${teamDesc}`;
+
+  return {
+    roundId,
+    maxN,
+    teamBase,
+    playerDelta,
+    teamDelta,
+    description
+  };
+}
+
+/* ===============================
+   2️⃣ 一次 commit 寫入 Supabase
+================================ */
+async function applyResultToSupabase(players, result) {
+  /* players.money 更新 */
+  for (const p of players) {
+    const delta = result.playerDelta[p.id] || 0;
+    if (delta === 0) continue;
+
+    await fetch(`${SUPABASE_URL}/players?id=eq.${p.id}`, {
+      method: "PATCH",
+      headers: HEADERS,
+      body: JSON.stringify({
+        money: p.money + delta
+      })
+    });
+  }
+
+  /* history 新增 */
+  await fetch(`${SUPABASE_URL}/history`, {
+    method: "POST",
+    headers: HEADERS,
+    body: JSON.stringify({
+      description: result.description
+    })
+  });
+}
+
+/* ===============================
+   3️⃣ 刪單回滾（完全還原）
+================================ */
+function rollbackFromHistory({
+  description,
+  players,
+  playerTeams
+}) {
+  const regex = /隊(\d+)\(([+-]?\d+)\)/g;
+  const teamRollback = {};
+  let match;
+
+  while ((match = regex.exec(description)) !== null) {
+    teamRollback[match[1]] = -Number(match[2]);
+  }
+
+  const playerRollback = {};
+  players.forEach(p => playerRollback[p.id] = 0);
+
+  Object.keys(teamRollback).forEach(teamId => {
+    const members = players
+      .filter(p => playerTeams[p.id] == teamId)
+      .map(p => p.id);
+
+    const per = teamRollback[teamId] / members.length;
+    members.forEach(pid => {
+      playerRollback[pid] += Math.round(per);
+    });
+  });
+
+  return playerRollback;
+}
+
+/* ===============================
+   4️⃣ 回滾寫回 Supabase
+================================ */
+async function applyRollback(players, rollbackDelta) {
+  for (const p of players) {
+    const delta = rollbackDelta[p.id] || 0;
+    if (delta === 0) continue;
+
+    await fetch(`${SUPABASE_URL}/players?id=eq.${p.id}`, {
+      method: "PATCH",
+      headers: HEADERS,
+      body: JSON.stringify({
+        money: p.money + delta
+      })
+    });
+  }
 }
 </script>
