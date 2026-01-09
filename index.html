@@ -109,7 +109,7 @@ function calculate() {
     const ball = Number(document.getElementById('v-ball').value);
     const eggU = Number(document.getElementById('v-egg').value);
     const m2Mult = Number(document.getElementById('v-m2').value);
-    const mults = { 0:0, 1:1, 2:m2Mult, 3:4, 4:6 };
+    const mults = { 0:0, 1:1, 2:m2Mult, 3:4, 4:6, 5:8 };
     
     let sc = {}; 
     const on = players.filter(p => playerTeams[p.id] > 0);
@@ -316,5 +316,6 @@ init();
 </script>
 </body>
 </html>
+
 
 
