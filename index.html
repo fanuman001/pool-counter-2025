@@ -183,7 +183,7 @@ function render() {
         const tScore = mems.reduce((sum, p) => sum + (sc[p.id] || 0), 0);
         const bc = ['','var(--blue)','var(--red)','#a855f7','#ec4899'][t.id] || '#555';
         let eggHtml = '';
-        for(let i=1; i<=5; i++) {
+        for(let i=1; i<=4; i++) {
             eggHtml += `<div class="egg-circle ${t.e >= i?'active':''} visible" onclick="adjE(${t.id},${i})">${i}媽</div>`;
         }
         return `<div class="card" style="border-left:8px solid ${bc};">
@@ -316,6 +316,7 @@ init();
 </script>
 </body>
 </html>
+
 
 
 
