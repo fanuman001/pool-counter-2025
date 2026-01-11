@@ -3,14 +3,9 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>ELITE v51.2 - 專業多隊倍率版</title>
-    
-    <meta name="apple-mobile-web-app-capable" content="yes">
-    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
-    <link rel="apple-touch-icon" href="https://cdn-icons-png.flaticon.com/512/808/808439.png">
-    
+    <title>ELITE v51.5 - 專業多隊倍率版</title>
     <style>
-        :root { --blue: #00d2ff; --red: #ff4757; --green: #2ed573; --gold: #ffa502; --bg: #0d1117; --card: #1c222b; --border: #30363d; --gray: #8b949e; }
+        :root { --blue: #00d2ff; --red: #ff4757; --green: #2ed573; --gold: #ffa502; --bg: #0d1117; --card: #1c222b; --border: #30363d; --gray: #8b949e; --dark-bg: #010409; }
         body { font-family: -apple-system, sans-serif; background: var(--bg); color: #fff; margin: 0; padding: 12px; font-size: 16px; }
         
         /* 頂部跳轉列 */
@@ -49,8 +44,16 @@
         .win-btn.active { background: var(--green); color: #000; }
         .hidden { display: none; }
 
-        /* 新增搜尋框樣式 */
-        .search-input { width: 100%; padding: 15px; background: #000; border: 1px solid var(--blue); border-radius: 12px; color: #fff; font-size: 16px; box-sizing: border-box; margin-bottom: 15px; outline: none; }
+        /* 錢包專用美化 UI */
+        .search-bar { width: 100%; padding: 14px; background: var(--dark-bg); border: 1px solid var(--blue); border-radius: 12px; color: #fff; font-size: 16px; margin-bottom: 15px; box-sizing: border-box; }
+        .wallet-item { display: flex; justify-content: space-between; align-items: center; padding: 16px; background: #21262d; border-radius: 15px; margin-bottom: 8px; border: 1px solid var(--border); }
+        .player-info b { font-size: 18px; color: #fff; }
+        .player-info small { color: var(--gray); font-size: 12px; }
+        .money-box { text-align: right; }
+        .money-val { font-size: 20px; font-weight: 900; display: block; }
+        .off-btn { background: rgba(255, 71, 87, 0.1); color: var(--red); border: 1px solid var(--red); padding: 4px 10px; border-radius: 8px; font-size: 12px; margin-top: 5px; }
+        .on-btn { background: #161b22; color: #fff; border: 1px solid #444; padding: 15px; border-radius: 12px; font-size: 16px; text-align: center; font-weight: bold; }
+        .section-title { color: var(--gray); font-size: 14px; margin: 20px 0 10px 5px; display: flex; align-items: center; gap: 5px; }
     </style>
 </head>
 <body>
@@ -81,9 +84,7 @@
         </div>
         <div id="p-grid" class="p-grid"></div>
     </div>
-    
     <div id="team-list"></div>
-    
     <button onclick="sendOrder()" style="width:100%; padding:25px; background:var(--green); color:#000; border:none; border-radius:20px; font-weight:900; font-size:24px; margin-bottom:20px; box-shadow: 0 5px 15px rgba(46, 213, 115, 0.3);">🚀 送單計分</button>
     <div style="display:flex; gap:10px; margin-bottom:40px;">
         <button onclick="addTeam()" style="flex:1; padding:15px; background:#2d3748; color:#fff; border:none; border-radius:15px; font-size:16px;">＋ 新增隊伍</button>
@@ -91,18 +92,18 @@
 </div>
 
 <div id="tab-wallet" class="hidden">
-    <div class="card">
-        <input type="text" id="wallet-search" class="search-input" placeholder="🔍 搜尋成員名字..." oninput="renderWallet()">
+    <div class="card" style="background: transparent; border: none; padding: 0;">
+        <input type="text" id="p-search" class="search-bar" placeholder="🔍 輸入姓名快速查找..." oninput="render()">
         
-        <div style="display:flex; gap:10px; margin-bottom:20px;">
-            <input id="new-p" type="text" placeholder="成員姓名" style="flex:1; background:#000; border:1px solid #444; color:#fff; padding:15px; border-radius:12px; font-size:18px;">
-            <button onclick="addPlayer()" style="background:var(--blue); color:#000; border:none; padding:15px 25px; border-radius:12px; font-weight:bold;">新增</button>
+        <div style="display:flex; gap:10px; margin-bottom:10px;">
+            <input id="new-p" type="text" placeholder="新成員姓名" style="flex:1; background:#000; border:1px solid #444; color:#fff; padding:15px; border-radius:12px; font-size:16px;">
+            <button onclick="addPlayer()" style="background:var(--blue); color:#000; border:none; padding:10px 20px; border-radius:12px; font-weight:bold;">新增</button>
         </div>
-        
-        <b style="color:var(--blue); display:block; margin-bottom:10px;">🟢 已上線成員</b>
+
+        <div class="section-title">🟢 已上線成員</div>
         <div id="wallet-online"></div>
         
-        <b style="color:var(--gray); display:block; margin-top:20px; margin-bottom:10px;">🔴 未上線成員</b>
+        <div class="section-title">🔴 未上線成員</div>
         <div id="wallet-offline" style="display:grid; grid-template-columns:1fr 1fr; gap:10px;"></div>
         
         <button onclick="settleFinal()" style="width:100%; padding:22px; background:var(--gold); border:none; border-radius:20px; margin-top:40px; font-weight:900; color:#000; font-size:20px;">💰 一鍵結單清零</button>
@@ -132,6 +133,8 @@ async function init() {
     } catch(e) { console.error("初始化失敗", e); }
 }
 
+async function patch(id, data) { await fetch(`${API_URL}/players?id=eq.${id}`, { method: 'PATCH', headers: HEADERS, body: JSON.stringify(data) }); }
+
 function calculate() {
     const base = Number(document.getElementById('v-base').value);
     const ball = Number(document.getElementById('v-ball').value);
@@ -141,7 +144,7 @@ function calculate() {
     
     let sc = {}; 
     const on = players.filter(p => playerTeams[p.id] > 0);
-    players.forEach(p => sc[p.id] = 0); // 確保所有玩家都有初始分值
+    players.forEach(p => sc[p.id] = 0);
     if (!on.length) return { sc };
 
     let teamMemsMap = {};
@@ -153,7 +156,6 @@ function calculate() {
         const teamBase = base * maxN;
         const winners = teamMemsMap[winId];
         const otherTeams = teams.filter(t => t.id !== winId && teamMemsMap[t.id].length > 0);
-        
         if (winners && winners.length && otherTeams.length) {
             const totalPool = otherTeams.length * teamBase;
             otherTeams.forEach(t => {
@@ -163,11 +165,9 @@ function calculate() {
             winners.forEach(p => sc[p.id] += (totalPool / winners.length));
         }
     }
-
     teams.forEach(t => {
         const teamMems = teamMemsMap[t.id];
         if (!teamMems || !teamMems.length) return;
-
         if (t.e > 0) {
             const eggBase = (eggU * (mults[t.e] || 0)) * maxN;
             const otherTeams = teams.filter(ot => ot.id !== t.id && teamMemsMap[ot.id].length > 0);
@@ -177,7 +177,6 @@ function calculate() {
             });
             teamMems.forEach(p => sc[p.id] += ((otherTeams.length * eggBase) / teamMems.length));
         }
-
         for (let tid in t.targetK) {
             const cnt = t.targetK[tid];
             if (cnt <= 0) continue;
@@ -194,6 +193,8 @@ function calculate() {
 
 function render() {
     const { sc } = calculate();
+    const sKey = document.getElementById('p-search')?.value.toLowerCase() || "";
+
     // 渲染 P-Grid
     document.getElementById('p-grid').innerHTML = players.filter(p => !p.name.startsWith('OFF_')).map(p => {
         const tid = playerTeams[p.id] || 0;
@@ -204,18 +205,16 @@ function render() {
         </div>`;
     }).join('');
 
-    // 渲染 Team List
+    // 渲染 Team List (保持不變)
     document.getElementById('team-list').innerHTML = teams.map(t => {
         const mems = players.filter(p => playerTeams[p.id] == t.id);
         const tScore = mems.reduce((sum, p) => sum + (sc[p.id] || 0), 0);
         const bc = ['','var(--blue)','var(--red)','#a855f7','#ec4899'][t.id] || '#555';
         let eggHtml = '';
-        for(let i=1; i<=4; i++) {
-            eggHtml += `<div class="egg-circle ${t.e >= i?'active':''} visible" onclick="adjE(${t.id},${i})">${i}媽</div>`;
-        }
+        for(let i=1; i<=4; i++) { eggHtml += `<div class="egg-circle ${t.e >= i?'active':''} visible" onclick="adjE(${t.id},${i})">${i}媽</div>`; }
         return `<div class="card" style="border-left:8px solid ${bc};">
             <div style="display:flex; justify-content:space-between; align-items:center;">
-                <b style="font-size:20px;">隊伍 ${t.id} (${mems.length}人)</b>
+                <b style="font-size:20px;">隊伍 ${t.id} (${mems.length})</b>
                 <b style="color:${tScore>=0?'var(--green)':'var(--red)'}; font-size:24px;">${Math.round(tScore)}</b>
                 ${teams.length > 2 ? `<span onclick="removeTeam(${t.id})" style="color:var(--red); font-size:24px;">×</span>` : '<span></span>'}
             </div>
@@ -224,7 +223,7 @@ function render() {
             </div>
             <div style="display:flex; gap:10px; margin:10px 0; overflow-x:auto; padding-bottom:5px;">
                 ${teams.filter(o=>o.id !== t.id).map(o => `
-                    <div style="background:#000; padding:8px; border-radius:12px; border:1px solid #444; display:flex; align-items:center; white-space:nowrap;">
+                    <div style="background:#000; padding:8px; border-radius:12px; border:1px solid #444; display:flex; align-items:center;">
                         <span style="font-size:12px; color:#888;">對隊${o.id}:</span>
                         <button onclick="adjK(${t.id},${o.id},-1)" style="color:#fff; border:none; background:none; font-size:20px; padding:0 8px;">-</button>
                         <b style="color:var(--gold); font-size:18px;">${t.targetK[o.id] || 0}</b>
@@ -236,35 +235,30 @@ function render() {
         </div>`;
     }).join('');
 
-    renderWallet(); // 拆分錢包渲染邏輯以便搜尋
-    renderHistory();
-}
-
-// 錢包專屬渲染邏輯 (支援搜尋)
-function renderWallet() {
-    const searchKey = document.getElementById('wallet-search').value.toLowerCase();
-    
-    // 已上線過濾
-    const online = players.filter(p => !p.name.startsWith('OFF_') && p.name.toLowerCase().includes(searchKey)).sort((a,b)=>b.money-a.money);
+    // 錢包渲染 - 已上線 (美化版)
+    const online = players.filter(p => !p.name.startsWith('OFF_') && p.name.toLowerCase().includes(sKey)).sort((a,b)=>b.money-a.money);
     document.getElementById('wallet-online').innerHTML = online.map(p => {
         const stat = getWR(p.name);
-        return `<div style="display:flex; justify-content:space-between; padding:15px 0; border-bottom:1px solid #333; align-items:center;">
-            <div onclick="showAnalysis('${p.name}')">
-                <b style="font-size:18px;">${p.name}</b><br>
-                <small style="color:var(--gray);">勝率: ${stat.wr}% | 總局: ${stat.total}</small>
+        return `<div class="wallet-item">
+            <div class="player-info" onclick="showAnalysis('${p.name}')">
+                <b>${p.name}</b><br>
+                <small>勝率: ${stat.wr}% | 總局數: ${stat.total}</small>
             </div>
-            <div style="text-align:right">
-                <b onclick="manualMoney(${p.id},'${p.name}',${p.money})" style="font-size:22px; color:${p.money>=0?'var(--green)':'var(--red)'}">${p.money}</b><br>
-                <button onclick="toggleOnOff(${p.id},'${p.name}')" style="color:var(--red); font-size:11px; background:none; border:1px solid var(--red); padding:3px 8px; border-radius:6px; margin-top:5px;">下線</button>
+            <div class="money-box">
+                <span class="money-val" onclick="manualMoney(${p.id},'${p.name}',${p.money})" style="color:${p.money>=0?'var(--green)':'var(--red)'}">${p.money}</span>
+                <button class="off-btn" onclick="toggleOnOff(${p.id},'${p.name}')">下線休息</button>
             </div>
         </div>`}).join('');
 
-    // 未上線過濾
-    document.getElementById('wallet-offline').innerHTML = players.filter(p => p.name.startsWith('OFF_') && p.name.toLowerCase().includes(searchKey)).map(p => `<button onclick="toggleOnOff(${p.id},'${p.name}')" style="background:#161b22; border:1px solid #444; color:#fff; padding:12px; border-radius:12px; font-size:14px;">＋ ${p.name.replace('OFF_','')}</button>`).join('');
+    // 錢包渲染 - 未上線 (美化版)
+    const offline = players.filter(p => p.name.startsWith('OFF_') && p.name.replace('OFF_','').toLowerCase().includes(sKey));
+    document.getElementById('wallet-offline').innerHTML = offline.map(p => `
+        <div class="on-btn" onclick="toggleOnOff(${p.id},'${p.name}')">
+            + ${p.name.replace('OFF_','')}
+        </div>`).join('');
+    
+    renderHistory();
 }
-
-// 原功能函數維持不變
-async function patch(id, data) { await fetch(`${API_URL}/players?id=eq.${id}`, { method: 'PATCH', headers: HEADERS, body: JSON.stringify(data) }); }
 
 async function toggleOnOff(id, name) {
     const isOff = name.startsWith('OFF_');
@@ -341,4 +335,4 @@ function renderHistory() {
 }
 
 function getAnalysis(games) { if(!games.length) return "暫無數據。"; let stats = {}; games.forEach(o => { const items = o.description.match(/([^\(\n, ]+)\((-?\d+)\)/g); if(items) items.forEach(it => { const [name, val] = it.split('('); stats[name] = (stats[name] || 0) + parseInt(val); }); }); const sorted = Object.entries(stats).sort((a,b) => b[1]-a[1]); return sorted.length ? `🔥 領先：${sorted[0][0]} (+${sorted[0][1]})<br>💀 墊底：${sorted[sorted.length-1][0]} (${sorted[sorted.length-1][1]})` : "..."; }
-function getWR(name) { const pms = matches.filter(m => !m.description.includes('💰') && m.description.includes(name)); if(!pms.length) return { wr:0, total:0 }; const wins = pms.filter(m => { const score = m.description.match(new RegExp
+function getWR(name) { const 
